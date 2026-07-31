@@ -674,7 +674,7 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
       <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
       {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
         <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
-        <Field label="Kết quả (thường có sau 7-10 ngày)"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
       </div>}
       {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
     </div>}
@@ -828,7 +828,7 @@ function LoginScreen({ onLogin }) {
     <Field label="Mật khẩu"><TextInput type="password" value={p} onChange={setP} /></Field>
     {err && <div className="text-red-600 text-xs mb-2">{err}</div>}
     <button className="w-full px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={submit} disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-    <div className="text-xs text-gray-400 mt-3">Demo: havinh / hocvien1 / nghiencuu — mật khẩu 123456</div>
+    <div className="text-xs text-gray-400 mt-3">Demo: havinh / hocvien1 / nghiencuu</div>
   </div>;
 }
 
