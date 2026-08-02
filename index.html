@@ -344,6 +344,23 @@ function CheckboxGroup({ options, value, onChange }) {
     ))}
   </div>;
 }
+
+// ---------- điều trị: câu hỏi nhiều lựa chọn + mục khác — vẫn lưu thành 1 chuỗi "dieuTri" để
+// tương thích với tìm kiếm/thống kê/xuất Excel đã có (không cần đổi backend) ----------
+const TREATMENT_OPTIONS = ["Thuốc bôi", "TAC", "Corticoid liều xung", "Corticoid hàng ngày", "MTX", "CKD", "JAK"];
+function buildDieuTriString(chon, khac) {
+  const parts = [...(chon || [])];
+  if (khac && khac.trim()) parts.push(`Khác: ${khac.trim()}`);
+  return parts.join(", ");
+}
+function TreatmentPicker({ chon, khac, onChange }) {
+  return <div>
+    <CheckboxGroup options={TREATMENT_OPTIONS} value={chon} onChange={(next) => onChange(next, khac)} />
+    <div className="mt-2">
+      <TextInput value={khac} onChange={(v) => onChange(chon, v)} placeholder="Khác (điền thông tin)" />
+    </div>
+  </div>;
+}
 function YesNoUnknownTable({ rows, data, onChange }) {
   return <div className="border border-gray-200 rounded-md overflow-hidden">
     {rows.map((r, i) => (
@@ -553,6 +570,7 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
   const saltTotal = calcSalt(d.vung || {});
 
@@ -673,13 +691,13 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
       <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
       {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
         <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
-        <Field label="Kết quả (thường có sau 7-10 ngày)"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
       </div>}
       {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
     </div>}
 
     {tab === 7 && <div>
-      <Field label="Điều trị"><TextArea value={d.dieuTri} onChange={(v) => set("dieuTri", v)} rows={4} /></Field>
+      <Field label="Điều trị"><TreatmentPicker chon={d.dieuTriChon} khac={d.dieuTriKhac} onChange={setDieuTri} /></Field>
       <div className="mt-2"><div className="text-sm font-medium text-gray-700 mb-1">Đối với bệnh nhân dùng thủ thuật</div>
         <Field label="Điểm đau VAS trong thủ thuật (0-10)"><TextInput type="number" value={d.vas} onChange={(v) => set("vas", v)} /></Field>
         <div className="grid sm:grid-cols-3 gap-x-4">
@@ -712,6 +730,7 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const saltNow = calcSalt(d.vung || {});
   const pctRegrowth = saltT0 > 0 ? fmt((saltT0 - saltNow) / saltT0 * 100) : null;
   const regrowthScore = ["Tóc mọc lại dựng đứng", "Dấu hiệu đuôi heo", "Tóc tơ ngắn"]
@@ -791,14 +810,14 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
         <RadioGroup options={["Không", "Có"]} value={d.xnStatus} onChange={(v) => set("xnStatus", v)} />
         {d.xnStatus === "Có" && <div className="mt-1"><TextArea value={d.xnKetQua} onChange={(v) => set("xnKetQua", v)} /></div>}
       </Field>
-      <Field label="Điều trị"><TextArea value={d.dieuTri} onChange={(v) => set("dieuTri", v)} rows={4} /></Field>
+      <Field label="Điều trị"><TreatmentPicker chon={d.dieuTriChon} khac={d.dieuTriKhac} onChange={setDieuTri} /></Field>
     </div>}
 
     {tab === 4 && <div>
       <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
       {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
         <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
-        <Field label="Kết quả (thường có sau 7-10 ngày)"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
       </div>}
       {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
     </div>}
@@ -827,7 +846,6 @@ function LoginScreen({ onLogin }) {
     <Field label="Mật khẩu"><TextInput type="password" value={p} onChange={setP} /></Field>
     {err && <div className="text-red-600 text-xs mb-2">{err}</div>}
     <button className="w-full px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={submit} disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
-    <div className="text-xs text-gray-400 mt-3">Demo: havinh / hocvien1 / nghiencuu — mật khẩu 123456</div>
   </div>;
 }
 
@@ -1268,7 +1286,7 @@ function App() {
     dermoscopy: "4_Dermoscopy",
     labs: "5_CLS", treponema: "5_CLS", viNam: "5_CLS", sieuAmTuyenGiap: "5_CLS", moBenhHoc: "5_CLS",
     il15: "5_CLS", il13: "5_CLS", ifnG: "5_CLS", ifnGMo: "5_CLS", il13Mo: "5_CLS", ngayLayMau: "5_CLS", xnStatus: "5_CLS", xnKetQua: "5_CLS",
-    dieuTri: "6_Dieutri", vas: "6_Dieutri", tdkm: "6_Dieutri", henKham: "6_Dieutri", tacDungPhuStatus: "6_Dieutri", tacDungPhuChiTiet: "6_Dieutri",
+    dieuTri: "6_Dieutri", dieuTriChon: "6_Dieutri", dieuTriKhac: "6_Dieutri", vas: "6_Dieutri", tdkm: "6_Dieutri", henKham: "6_Dieutri", tacDungPhuStatus: "6_Dieutri", tacDungPhuChiTiet: "6_Dieutri",
     anh: "7_Anh",
     gpbCo: "8_GPB", gpbNgayThucHien: "8_GPB", gpbKetQua: "8_GPB",
   };
@@ -1377,7 +1395,10 @@ function App() {
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-5 order-3 lg:order-none lg:col-start-2 lg:row-start-2">
-          <div className="flex items-baseline gap-2"><span className="text-3xl font-semibold text-teal-700">{today.length}</span><span className="text-gray-500">lượt khám hôm nay ({todayISO()})</span></div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-2"><span className="text-3xl font-semibold text-teal-700">{today.length}</span><span className="text-gray-500">lượt khám hôm nay ({todayISO()})</span></div>
+            <button title="Làm mới ngay" className="text-xs px-2.5 py-1 bg-gray-100 rounded-md hover:bg-gray-200 text-gray-600 whitespace-nowrap" onClick={() => { loadToday(); loadGpbWaitlist(); }}>↻ Làm mới</button>
+          </div>
           {today.length > 0 && <div className="mt-3">
             <TextInput value={todayFilter} onChange={setTodayFilter} placeholder="Tìm theo tên bệnh nhân hoặc mã hồ sơ..." />
             <div className="mt-2 divide-y divide-gray-100">
@@ -1439,7 +1460,13 @@ function App() {
             <div className="text-xs text-gray-400 mt-1">Hiện chỉ có module AA hoạt động — bộ lọc sẽ có tác dụng khi thêm bệnh khác.</div>
           </Field>
           <Field label="Mức độ nặng"><RadioGroup options={MUC_DO_LEVELS} value={searchFilters.mucDo} onChange={(v) => setSearchFilters({ ...searchFilters, mucDo: v === searchFilters.mucDo ? "" : v })} /></Field>
-          <Field label="Điều trị chứa từ khoá"><TextInput value={searchFilters.dieuTriChua} onChange={(v) => setSearchFilters({ ...searchFilters, dieuTriChua: v })} /></Field>
+          <Field label="Điều trị">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" value={searchFilters.dieuTriChua} onChange={(e) => setSearchFilters({ ...searchFilters, dieuTriChua: e.target.value })}>
+              <option value="">— Không lọc —</option>
+              {TREATMENT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              <option value="Khác">Khác</option>
+            </select>
+          </Field>
           <Field label="Xét nghiệm có">
             <select className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" value={searchFilters.xetNghiemCo} onChange={(e) => setSearchFilters({ ...searchFilters, xetNghiemCo: e.target.value })}>
               <option value="">— Không lọc —</option>
