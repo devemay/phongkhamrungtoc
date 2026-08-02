@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect } = React;
 
@@ -447,6 +446,12 @@ function GpbBadge({ data }) {
   if (!st) return null;
   if (st.type === "waiting") return <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs mr-1.5">Chờ GPB ({st.days})</span>;
   return <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs mr-1.5">Có GPB</span>;
+}
+function ImageBadge({ data }) {
+  const has = (data?.anh || []).length > 0 || data?.hasAnh === true;
+  return has
+    ? <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs mr-1.5">Ảnh</span>
+    : <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs mr-1.5">Ảnh</span>;
 }
 
 // ---------- biểu đồ nhỏ, tự vẽ bằng SVG (không phụ thuộc thư viện ngoài) ----------
@@ -1165,7 +1170,7 @@ function App() {
     const out = res.danh_sach.map((r) => ({
       loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru,
       daDienDuLieu: !!r.da_dien_du_lieu, followupId: r.followup_id,
-      record: { dieuTri: r.dieu_tri, gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua },
+      record: { dieuTri: r.dieu_tri, gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua, hasAnh: r.has_anh },
     }));
     setToday(out);
     let newCount = 0, followupCount = 0; const treatmentCounts = {};
@@ -1200,7 +1205,7 @@ function App() {
     setSearchResults(res.ket_qua.map((r) => ({
       loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, ngay: r.ngay,
       mucDo: r.muc_do_nang, daDienDuLieu: !!r.da_dien_du_lieu, followupId: r.followup_id, soLuotTK: r.so_luot_tai_kham,
-      record: { gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua },
+      record: { gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua, hasAnh: r.has_anh },
     })));
   }
   async function handleSearch() {
@@ -1413,7 +1418,7 @@ function App() {
                 .sort((a, b) => (a.daDienDuLieu === b.daDienDuLieu ? 0 : a.daDienDuLieu ? 1 : -1))
                 .map((r, i) => <button key={i} onClick={() => openRecord(r)} className="w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50">
                   <span>{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru})</span></span>
-                  <span className="flex items-center"><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
+                  <span className="flex items-center"><ImageBadge data={r.record} /><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
                 </button>)}
             </div>
           </div>}
@@ -1493,7 +1498,7 @@ function App() {
             <div className="divide-y divide-gray-100">
               {searchResults.map((r, i) => <button key={i} onClick={() => openRecord(r)} className="w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50">
                 <span>{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru}, {r.ngay}){searchFilters.soLuotTaiKhamItNhat ? ` · tổng ${r.soLuotTK} lượt tái khám` : ""}</span> — {r.mucDo}</span>
-                <span className="flex items-center"><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
+                <span className="flex items-center"><ImageBadge data={r.record} /><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
               </button>)}
             </div>
           </div>}
@@ -1540,7 +1545,7 @@ function App() {
     {view === "newCase" && patient && aaCase && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ <b>{aaCase.maLuuTru}</b></div>
-        <span className="flex items-center"><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
+        <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
       </div>
       <NewCaseForm initial={aaCase.benhAnMoi} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />
     </div>}
@@ -1567,11 +1572,11 @@ function App() {
         <div className="divide-y divide-gray-100">
           <div className="px-4 py-3 flex items-center justify-between text-sm">
             <div><div className="font-medium">T0 — Bệnh án mới ({aaCase.benhAnMoi?.ngayKham || "chưa có ngày"})</div><div className="text-xs text-gray-400">SALT {fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · {aaCase.benhAnMoi?.theLamSang || "—"}</div></div>
-            <span className="flex items-center"><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
+            <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
           </div>
           {(aaCase.taiKhams || []).map((tk, i) => { const s = calcSalt(tk.vung || {}); return <button key={i} onClick={() => { setEditIdx(i); setView("followup"); }} className="w-full text-left px-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50">
             <div><div className="font-medium">Tái khám {i + 1} ({tk.ngayKham || "chưa có ngày"})</div><div className="text-xs text-gray-400">SALT {fmt(s)}{tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}</div></div>
-            <span className="flex items-center"><GpbBadge data={tk} /><StatusBadge done={tk.daDienDuLieu} /></span>
+            <span className="flex items-center"><ImageBadge data={tk} /><GpbBadge data={tk} /><StatusBadge done={tk.daDienDuLieu} /></span>
           </button>; })}
           {(aaCase.taiKhams || []).length === 0 && <div className="px-4 py-3 text-sm text-gray-400">Chưa có lần tái khám nào.</div>}
         </div>
@@ -1581,7 +1586,7 @@ function App() {
     {view === "followup" && patient && aaCase && editIdx !== null && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
-        <span className="flex items-center"><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} /></span>
+        <span className="flex items-center"><ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} /></span>
       </div>
       <FollowUpForm initial={aaCase.taiKhams[editIdx]} saltT0={calcSalt(aaCase.benhAnMoi?.vung || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
     </div>}
