@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect } = React;
 
@@ -120,7 +119,7 @@ const BAC_SI = ["BS Hà Vinh", "BS Tuỳ", "BS Xuân", "BS Tráng", "BS Trang", 
 const MUC_DO_LEVELS = ["Không rụng tóc", "Nhẹ/giới hạn", "Trung bình", "Nặng", "Rất nặng"];
 const DISEASES = [
   { k: "AA", l: "Rụng tóc mảng (AA)", active: true },
-  { k: "AGA", l: "Rụng tóc Androgen (AGA)", active: false },
+  { k: "AGA", l: "Rụng tóc Androgen (AGA)", active: true },
   { k: "NONSCAR", l: "Rụng tóc không sẹo", active: false },
 ];
 const SALT_VUNG = [
@@ -151,6 +150,25 @@ const LABS = [
   ["ana","ANA hep2",""],["satHuyetThanh","Sắt huyết thanh","µmol/L"],["feritin","Feritin","ng/mL"],["canxi","Canxi toàn phần","mg/dL"],
   ["vitaminD","Vitamin D","ng/mL"],["vitaminB12","Vitamin B12","pg/mL"],["kem","Kẽm (Zn)","µmol/L"],["ige","IgE toàn phần","UI/mL"],
 ];
+
+// ---------- hằng số riêng cho bệnh AGA (Rụng tóc Androgen) ----------
+const TIENSU_BANTHAN_AGA = ["Tăng huyết áp","Béo phì","Ung thư tuyến tiền liệt (nam)","Buồng trứng đa nang (nữ)","Rậm lông (nữ)","Bệnh lý tuyến giáp","Viêm da dầu","Trứng cá nặng","Suy giáp nặng","Cường giáp","Hội chứng Cushing","Suy thượng thận","Bệnh to đầu chi","Đái tháo đường","Đang dùng thuốc điều trị tăng đường máu","Đang dùng thuốc điều trị tăng triglycerid","Đang dùng thuốc điều trị giảm HDL-C","Dùng corticoid toàn thân ≥1 tháng","Dùng thuốc tránh thai phối hợp ≥1 tháng","Dùng thuốc chống loạn thần ≥3 tháng","Dùng ức chế protease HIV ≥6 tháng"];
+const DAU_HIEU_CUONG_ANDROGEN = ["Mụn", "Da dầu", "Rậm lông", "Kinh nguyệt bất thường (nữ)"];
+const HAMILTON_NORWOOD = ["I", "II", "III", "III Vertex", "IV", "V", "VI", "VII"];
+const SINCLAIR_SCALE = ["I", "II", "III", "IV", "V"];
+const LUDWIG_SCALE = ["I", "II", "III"];
+const PCOS_ROI_LOAN_KINH_NGUYET = ["Chu kỳ > 35 ngày hoặc < 21 ngày", "< 8 chu kỳ/năm", "> 90 ngày cho bất kỳ chu kỳ nào"];
+const PCOS_CUONG_ANDROGEN = ["Lâm sàng: Mụn/rậm lông/rụng tóc kiểu nam", "Sinh hoá: Free testosterone hoặc DHEA-SO4 tăng"];
+const PCOS_HINH_ANH_BUONG_TRUNG = ["≥12 nang nhỏ (2-9mm) mỗi buồng trứng", "Thể tích buồng trứng > 10 mL", "Nồng độ AMH tăng cao"];
+const LABS_AGA = [
+  ["hongCau","Hồng cầu","T/L"],["hgb","HGB","G/L"],["bachCau","Bạch cầu","G/L"],["testosteroneTuDo","Testosterone tự do",""],
+  ["tieuCau","Tiểu cầu","G/L"],["dheas","DHEAS",""],["glucose","Glucose đói","mg/L"],["fshLh","FSH/LH",""],
+  ["astAlt","AST/ALT","mmol/L"],["satHuyetThanh","Sắt huyết thanh","µmol/L"],["ureCreatinin","Ure/Creatinin","U/L"],["feritin","Feritin","ng/mL"],
+  ["triglycerid","Triglycerid",""],["canxi","Canxi toàn phần","mg/dL"],["cholesterol","Cholesterol","U/L"],["vitaminD","Vitamin D","ng/mL"],
+  ["hdlC","HDL-C","mg/L"],["vitaminB12","Vitamin B12","pg/mL"],["ldlC","LDL-C",""],["kem","Kẽm (Zn)","µmol/L"],
+  ["ft4","FT4","pmol/L"],["tsh","TSH","mIU/L"],["crp","CRP","mg/L"],
+];
+const DERMOSCOPY_AGA = ["Đa dạng đường kính sợi tóc", "Dấu hiệu chấm vàng", "Dấu hiệu quầng nâu", "Mạng lưới sắc tố tổ ong"];
 
 function calcSalt(vung) {
   return SALT_VUNG.reduce((sum, v) => sum + v.w * (Number(getPath(vung, `${v.k}.b`, 0)) || 0) / 100, 0);
@@ -199,6 +217,24 @@ const FOLLOWUP_SECTIONS = {
   "Dermoscopy": ["dermoscopy", "vas", "tdkm"],
   "Cận lâm sàng & điều trị": ["xnStatus", "xnKetQua", "dieuTri"],
   "Giải phẫu bệnh": ["gpbCo"],
+  "Hình ảnh": ["anh"],
+};
+const NEW_AGA_CASE_SECTIONS = {
+  "Hành chính": ["ngayKham", "bacSiKham", "luuHuyetTuong", "luuHuyetThanh"],
+  "Bệnh sử - Tiền sử": ["thoiGianKhoiPhat", "benhSuTruoc", "tienSuBanThan", "tienSuGiaDinh"],
+  "Khám thực thể": ["canNang", "chieuCao", "vongBung", "mach", "ha", "dauHieuCuongAndrogen", "phanBoRungToc", "matDoToc", "duongKinhSoiToc", "pullTest"],
+  "Thang điểm": ["hamiltonNorwood", "sinclairScale", "ludwig", "pcos"],
+  "Cận lâm sàng": ["labs", "sieuAmOBung", "sieuAmTuyenGiap", "moBenhHoc", "dermoscopy", "vungTran", "vungDinh", "vungCham", "xnKhac"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Điều trị & thủ thuật": ["dieuTri", "henKham"],
+  "Hình ảnh": ["anh"],
+};
+const FOLLOWUP_AGA_SECTIONS = {
+  "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "mucDoSoVoiTruoc"],
+  "Thang điểm": ["hamiltonNorwood", "sinclairScale"],
+  "Tác dụng phụ & Xét nghiệm": ["tacDungPhuStatus", "xnStatus"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Điều trị": ["dieuTri"],
   "Hình ảnh": ["anh"],
 };
 
@@ -840,10 +876,213 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
   </div>;
 }
 
+const SECTIONS_AGA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Thang điểm", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh"];
+const SECTIONS_AGA_FU = ["Lâm sàng", "Thang điểm", "Tác dụng phụ & Xét nghiệm", "Giải phẫu bệnh", "Điều trị", "Hình ảnh"];
+
+function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
+
+  return <div>
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_AGA_NEW.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, NEW_AGA_CASE_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+    </div>
+
+    {tab === 0 && <div className="grid sm:grid-cols-2 gap-x-6">
+      <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+      <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+      <Field label="Lưu huyết tương"><RadioGroup options={["Có", "Không"]} value={d.luuHuyetTuong} onChange={(v) => set("luuHuyetTuong", v)} /></Field>
+      <Field label="Lưu huyết thanh"><RadioGroup options={["Có", "Không"]} value={d.luuHuyetThanh} onChange={(v) => set("luuHuyetThanh", v)} /></Field>
+    </div>}
+
+    {tab === 1 && <div>
+      <Field label="Thời gian từ khi khởi phát bệnh"><TextInput value={d.thoiGianKhoiPhat} onChange={(v) => set("thoiGianKhoiPhat", v)} /></Field>
+      <Field label="Bệnh sử các đợt bệnh trước đó (tên thuốc, liều dùng, đáp ứng...)"><TextArea value={d.benhSuTruoc} onChange={(v) => set("benhSuTruoc", v)} /></Field>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử bản thân</div>
+        <YesNoUnknownTable rows={TIENSU_BANTHAN_AGA} data={d.tienSuBanThan} onChange={(r, f, v) => set(`tienSuBanThan.${r}.${f}`, v)} /></div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử gia đình</div>
+        <Field label="Có người thân mắc rụng tóc androgen">
+          <RadioGroup options={["Có", "Không", "Không biết"]} value={d.tienSuGiaDinh?.status} onChange={(v) => set("tienSuGiaDinh.status", v)} />
+          {d.tienSuGiaDinh?.status === "Có" && <div className="mt-1"><TextInput value={d.tienSuGiaDinh?.detail} onChange={(v) => set("tienSuGiaDinh.detail", v)} /></div>}
+        </Field>
+      </div>
+    </div>}
+
+    {tab === 2 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Cân nặng (kg)"><TextInput type="number" value={d.canNang} onChange={(v) => set("canNang", v)} /></Field>
+        <Field label="Chiều cao (cm)"><TextInput type="number" value={d.chieuCao} onChange={(v) => set("chieuCao", v)} /></Field>
+        <Field label="Vòng bụng (cm)"><TextInput type="number" value={d.vongBung} onChange={(v) => set("vongBung", v)} /></Field>
+      </div>
+      <Field label="BMI (tự tính)"><div className="text-sm text-gray-500 py-1.5">{bmi || "—"}</div></Field>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Sốt">
+          <RadioGroup options={["Có", "Không"]} value={d.sotStatus} onChange={(v) => set("sotStatus", v)} />
+          {d.sotStatus === "Có" && <div className="mt-1"><TextInput value={d.sotDo} onChange={(v) => set("sotDo", v)} /></div>}
+        </Field>
+        <Field label="Mạch (lần/phút)"><TextInput type="number" value={d.mach} onChange={(v) => set("mach", v)} /></Field>
+        <Field label="Huyết áp (mmHg)"><TextInput value={d.ha} onChange={(v) => set("ha", v)} /></Field>
+      </div>
+      <Field label="Dấu hiệu cường androgen"><CheckboxGroup options={DAU_HIEU_CUONG_ANDROGEN} value={d.dauHieuCuongAndrogen} onChange={(v) => set("dauHieuCuongAndrogen", v)} /></Field>
+      <Field label="Phân bố rụng tóc"><RadioGroup options={["Vùng trán", "Vùng đỉnh", "Lan tỏa"]} value={d.phanBoRungToc} onChange={(v) => set("phanBoRungToc", v)} /></Field>
+      <Field label="Mật độ tóc"><TextInput value={d.matDoToc} onChange={(v) => set("matDoToc", v)} /></Field>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Đường kính sợi tóc"><RadioGroup options={["Không đều", "Giảm dần"]} value={d.duongKinhSoiToc} onChange={(v) => set("duongKinhSoiToc", v)} /></Field>
+        <Field label="Dấu hiệu viêm, sẹo"><RadioGroup options={["Có", "Không"]} value={d.dauHieuViemSeo} onChange={(v) => set("dauHieuViemSeo", v)} /></Field>
+        <Field label="Test kéo tóc"><RadioGroup options={["Dương tính", "Âm tính"]} value={d.pullTest} onChange={(v) => set("pullTest", v)} /></Field>
+      </div>
+    </div>}
+
+    {tab === 3 && <div>
+      <Field label="Bảng 1: Rụng tóc hói kiểu nam (Hamilton - Norwood)"><RadioGroup options={HAMILTON_NORWOOD} value={d.hamiltonNorwood} onChange={(v) => set("hamiltonNorwood", v)} /></Field>
+      <Field label="Bảng 2: Rụng tóc hói kiểu nữ (Sinclair scale)"><RadioGroup options={SINCLAIR_SCALE} value={d.sinclairScale} onChange={(v) => set("sinclairScale", v)} /></Field>
+      <Field label="Bảng 3: Thang điểm Ludwig"><RadioGroup options={LUDWIG_SCALE} value={d.ludwig} onChange={(v) => set("ludwig", v)} /></Field>
+      <div className="mt-4 border border-gray-200 rounded-md p-3">
+        <div className="text-sm font-medium text-gray-700 mb-2">Bảng 4: Tiêu chuẩn PCOS (Rotterdam 2003)</div>
+        <Field label="1. Rối loạn kinh nguyệt"><CheckboxGroup options={PCOS_ROI_LOAN_KINH_NGUYET} value={d.pcos?.roiLoanKinhNguyet} onChange={(v) => set("pcos.roiLoanKinhNguyet", v)} /></Field>
+        <Field label="2. Cường androgen"><CheckboxGroup options={PCOS_CUONG_ANDROGEN} value={d.pcos?.cuongAndrogen} onChange={(v) => set("pcos.cuongAndrogen", v)} /></Field>
+        <Field label="3. Hình ảnh buồng trứng đa nang / AMH tăng"><CheckboxGroup options={PCOS_HINH_ANH_BUONG_TRUNG} value={d.pcos?.hinhAnhBuongTrung} onChange={(v) => set("pcos.hinhAnhBuongTrung", v)} /></Field>
+        <Field label="Chẩn đoán xác định PCOS (khi ≥2/3 tiêu chuẩn trên và đã loại trừ nguyên nhân khác)"><RadioGroup options={["Có", "Không"]} value={d.pcos?.chanDoan} onChange={(v) => set("pcos.chanDoan", v)} /></Field>
+      </div>
+    </div>}
+
+    {tab === 4 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        {LABS_AGA.map(([k, l, u]) => <Field key={k} label={`${l}${u ? ` (${u})` : ""}`}><TextInput value={getPath(d, `labs.${k}`)} onChange={(v) => set(`labs.${k}`, v)} /></Field>)}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 mt-2">
+        <Field label="Siêu âm ổ bụng (buồng trứng)"><TextInput value={d.sieuAmOBung} onChange={(v) => set("sieuAmOBung", v)} /></Field>
+        <Field label="Siêu âm tuyến giáp"><TextInput value={d.sieuAmTuyenGiap} onChange={(v) => set("sieuAmTuyenGiap", v)} /></Field>
+        <Field label="Mô bệnh học"><TextInput value={d.moBenhHoc} onChange={(v) => set("moBenhHoc", v)} /></Field>
+        <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
+      </div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Kết quả Dermoscopy</div>
+        {DERMOSCOPY_AGA.map((item) => (
+          <div key={item} className="flex items-center justify-between py-1 border-b border-gray-100 text-sm">
+            <span>{item}</span><RadioGroup options={["Có", "Không"]} value={getPath(d, `dermoscopy.${item}`)} onChange={(v) => set(`dermoscopy.${item}`, v)} />
+          </div>
+        ))}
+      </div>
+      {["vungTran", "vungDinh", "vungCham"].map((key, i) => (
+        <div key={key} className="mt-4 border border-gray-200 rounded-md p-3">
+          <div className="text-sm font-medium text-gray-700 mb-2">{["Vùng trán", "Vùng đỉnh", "Vùng chẩm"][i]}</div>
+          <div className="grid sm:grid-cols-3 gap-x-4">
+            <Field label="Hair Rate Anagen/Telogen (%)"><TextInput value={getPath(d, `${key}.anagenTelogen`)} onChange={(v) => set(`${key}.anagenTelogen`, v)} /></Field>
+            <Field label="Hair Rate Terminal (%)"><TextInput value={getPath(d, `${key}.terminal`)} onChange={(v) => set(`${key}.terminal`, v)} /></Field>
+            <Field label="Hair Rate Vellus (%)"><TextInput value={getPath(d, `${key}.vellus`)} onChange={(v) => set(`${key}.vellus`, v)} /></Field>
+            <Field label="Hair Density (/cm²)"><TextInput value={getPath(d, `${key}.density`)} onChange={(v) => set(`${key}.density`, v)} /></Field>
+            <Field label="Average hair/Unit"><TextInput value={getPath(d, `${key}.avgPerUnit`)} onChange={(v) => set(`${key}.avgPerUnit`, v)} /></Field>
+            <Field label="Mean Thickness"><TextInput value={getPath(d, `${key}.meanThickness`)} onChange={(v) => set(`${key}.meanThickness`, v)} /></Field>
+          </div>
+        </div>
+      ))}
+    </div>}
+
+    {tab === 5 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 6 && <div>
+      <Field label="Điều trị"><TextArea value={d.dieuTri} onChange={(v) => set("dieuTri", v)} rows={4} /></Field>
+      <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
+    </div>}
+
+    {tab === 7 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+
+    {(() => { const missing = Object.keys(NEW_AGA_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_AGA_CASE_SECTIONS[s]));
+      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
+function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
+  const showSinclair = patientGioiTinh === "Nữ";
+
+  return <div>
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_AGA_FU.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+    </div>
+
+    {tab === 0 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+        <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+      </div>
+      <Field label="Lâm sàng"><TextArea value={d.lamSang} onChange={(v) => set("lamSang", v)} /></Field>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Test kéo tóc"><RadioGroup options={["Dương tính", "Âm tính"]} value={d.pullTest} onChange={(v) => set("pullTest", v)} /></Field>
+        <Field label="Mức độ so với lần trước"><RadioGroup options={["Tăng", "Giảm", "Không đổi"]} value={d.mucDoSoVoiTruoc} onChange={(v) => set("mucDoSoVoiTruoc", v)} /></Field>
+      </div>
+    </div>}
+
+    {tab === 1 && <div>
+      <div className="text-xs text-gray-400 mb-2">Bảng thang điểm hiện theo giới tính bệnh nhân đã ghi nhận ở hành chính ({patientGioiTinh || "chưa rõ giới"}) — nếu chưa rõ, hiện cả 2 bảng.</div>
+      {(showSinclair || !patientGioiTinh) && <Field label="Bảng 2: Rụng tóc hói kiểu nữ (Sinclair scale)"><RadioGroup options={SINCLAIR_SCALE} value={d.sinclairScale} onChange={(v) => set("sinclairScale", v)} /></Field>}
+      {(!showSinclair || !patientGioiTinh) && <Field label="Bảng 1: Rụng tóc hói kiểu nam (Hamilton - Norwood)"><RadioGroup options={HAMILTON_NORWOOD} value={d.hamiltonNorwood} onChange={(v) => set("hamiltonNorwood", v)} /></Field>}
+    </div>}
+
+    {tab === 2 && <div>
+      <Field label="Tác dụng phụ không mong muốn">
+        <RadioGroup options={["Không", "Có"]} value={d.tacDungPhuStatus} onChange={(v) => set("tacDungPhuStatus", v)} />
+        {d.tacDungPhuStatus === "Có" && <div className="mt-1"><TextInput value={d.tacDungPhuChiTiet} onChange={(v) => set("tacDungPhuChiTiet", v)} /></div>}
+      </Field>
+      <Field label="Xét nghiệm">
+        <RadioGroup options={["Không", "Có"]} value={d.xnStatus} onChange={(v) => set("xnStatus", v)} />
+        {d.xnStatus === "Có" && <div className="mt-1"><TextArea value={d.xnKetQua} onChange={(v) => set("xnKetQua", v)} /></div>}
+      </Field>
+    </div>}
+
+    {tab === 3 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 4 && <Field label="Điều trị"><TreatmentPicker chon={d.dieuTriChon} khac={d.dieuTriKhac} onChange={setDieuTri} /></Field>}
+
+    {tab === 5 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+
+    {(() => { const missing = Object.keys(FOLLOWUP_AGA_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s]));
+      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
 function LoginScreen({ onLogin }) {
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const submit = async () => {
     setErr(""); setBusy(true);
+
     try { await onLogin(u.trim(), p); } catch (e) { setErr(e.message || "Sai tên đăng nhập hoặc mật khẩu"); }
     setBusy(false);
   };
@@ -937,6 +1176,8 @@ function AccountManagementScreen({ currentUsername, listDoctors, createDoctor, u
   const [doctors, setDoctors] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [resettingUser, setResettingUser] = useState(null);
+  const [editingNameUser, setEditingNameUser] = useState(null);
+  const [nameDraft, setNameDraft] = useState("");
   const [err, setErr] = useState("");
 
   const load = async () => { try { setDoctors(await listDoctors()); } catch (e) { setErr(e.message); } };
@@ -945,6 +1186,10 @@ function AccountManagementScreen({ currentUsername, listDoctors, createDoctor, u
   const handleCreate = async (d) => { await createDoctor(d); setShowNewForm(false); await load(); };
   const handleToggle = async (username, field, value) => { try { await updatePermissions(username, { [field]: value }); await load(); } catch (e) { setErr(e.message); } };
   const handleReset = async (username, pw) => { await resetPassword(username, pw); setResettingUser(null); };
+  const handleSaveName = async (username) => {
+    if (!nameDraft.trim()) { setErr("Tên hiển thị không được để trống"); return; }
+    try { await updatePermissions(username, { display_name: nameDraft.trim() }); setEditingNameUser(null); await load(); } catch (e) { setErr(e.message); }
+  };
   const handleDelete = async (username) => {
     if (!window.confirm(`Xoá tài khoản "${username}"? Không thể hoàn tác.`)) return;
     try { await deleteDoctor(username); await load(); } catch (e) { setErr(e.message); }
@@ -962,11 +1207,20 @@ function AccountManagementScreen({ currentUsername, listDoctors, createDoctor, u
       {doctors.map((d) => (
         <div key={d.username} className="py-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <span className="font-medium text-sm">{d.display_name}</span>
-              <span className="text-xs text-gray-400 ml-2">@{d.username}</span>
-              {d.username === currentUsername && <span className="text-xs text-teal-600 ml-2">(bạn)</span>}
-            </div>
+            {editingNameUser === d.username ? (
+              <div className="flex items-center gap-2">
+                <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} className="border border-gray-300 rounded-md px-2 py-1 text-sm w-48" />
+                <button className="text-xs px-2.5 py-1 bg-teal-600 text-white rounded-md" onClick={() => handleSaveName(d.username)}>Lưu</button>
+                <button className="text-xs px-2.5 py-1 bg-gray-100 rounded-md" onClick={() => setEditingNameUser(null)}>Huỷ</button>
+              </div>
+            ) : (
+              <div>
+                <span className="font-medium text-sm">{d.display_name}</span>
+                <span className="text-xs text-gray-400 ml-2">@{d.username}</span>
+                {d.username === currentUsername && <span className="text-xs text-teal-600 ml-2">(bạn)</span>}
+                <button className="text-xs text-teal-700 hover:underline ml-2" onClick={() => { setEditingNameUser(d.username); setNameDraft(d.display_name); }}>Sửa tên</button>
+              </div>
+            )}
             <div className="flex gap-2">
               <button className="text-xs px-2.5 py-1 bg-gray-100 rounded-md hover:bg-gray-200" onClick={() => setResettingUser(resettingUser === d.username ? null : d.username)}>Đặt lại mật khẩu</button>
               {d.username !== currentUsername && <button className="text-xs px-2.5 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => handleDelete(d.username)}>Xoá</button>}
@@ -1124,6 +1378,7 @@ function App() {
   const [maBNInput, setMaBNInput] = useState("");
   const [patient, setPatient] = useState(null);
   const [aaCase, setAaCase] = useState(null);
+  const [currentDisease, setCurrentDisease] = useState("aa"); // "aa" | "aga" — bệnh nào đang mở
   const [view, setView] = useState("home");
   const [editIdx, setEditIdx] = useState(null);
   const [today, setToday] = useState([]);
@@ -1210,15 +1465,23 @@ function App() {
     })));
   }
   async function handleSearch() {
-    const maBN = maBNInput.trim(); if (!maBN) return;
+    const typed = maBNInput.trim(); if (!typed) return;
     try {
-      const p = await api(`/patients/${encodeURIComponent(maBN)}`);
-      setPatient(mapPatientFromApi(p));
+      const p = await api(`/patients/${encodeURIComponent(typed)}`);
+      const pp = mapPatientFromApi(p);
+      setPatient(pp);
+      // dùng đúng mã BN thật (có thể có số 0 ở đầu) trả về từ backend, không dùng lại mã đã gõ tắt
+      // Thử lần lượt từng bệnh — bệnh nhân có thể đã có hồ sơ AA hoặc AGA (chưa hỗ trợ 2 bệnh cùng lúc)
       try {
-        const c = await api(`/cases/${encodeURIComponent(maBN)}/aa`);
-        setAaCase(mapCaseFromApi(c)); setView("timeline");
-      } catch (e) { setAaCase(null); setView("chooseDisease"); }
-    } catch (e) { setPatient({ maBN }); setAaCase(null); setView("newPatient"); }
+        const c = await api(`/cases/${encodeURIComponent(pp.maBN)}/aa`);
+        setAaCase(mapCaseFromApi(c)); setCurrentDisease("aa"); setView("timeline"); return;
+      } catch (e) {}
+      try {
+        const c = await api(`/cases/${encodeURIComponent(pp.maBN)}/aga`);
+        setAaCase(mapCaseFromApi(c)); setCurrentDisease("aga"); setView("timeline"); return;
+      } catch (e) {}
+      setAaCase(null); setView("chooseDisease");
+    } catch (e) { setPatient({ maBN: typed }); setAaCase(null); setView("newPatient"); }
   }
   async function openRecord(row) {
     const p = await api(`/patients/${encodeURIComponent(row.maBN)}`);
@@ -1232,27 +1495,33 @@ function App() {
     await api("/patients", { method: "POST", body: JSON.stringify({ ma_bn: p.maBN, ho_ten: p.hoTen, gioi_tinh: p.gioiTinh, nam_sinh: p.namSinh ? Number(p.namSinh) : null, dia_chi: p.diaChi, sdt: p.sdt }) });
     setPatient(p); setView("chooseDisease");
   }
-  async function createCase() {
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/aa/create`, { method: "POST", body: JSON.stringify({}) });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/aa`);
+  async function createCase(disease) {
+    setCurrentDisease(disease);
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}/create`, { method: "POST", body: JSON.stringify({}) });
+    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}`);
     setAaCase(mapCaseFromApi(c)); setView("newCase");
   }
   async function saveNewCase(data) {
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/aa`, { method: "PUT", body: JSON.stringify({ data }) });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/aa`);
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`, { method: "PUT", body: JSON.stringify({ data }) });
+    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
     setAaCase(mapCaseFromApi(c)); setView("timeline"); loadToday(); loadGpbWaitlist();
   }
   async function createFollowup() {
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/aa/followups/create`, { method: "POST", body: JSON.stringify({}) });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/aa`);
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/create`, { method: "POST", body: JSON.stringify({}) });
+    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
     const cc = mapCaseFromApi(c); setAaCase(cc);
     setEditIdx(cc.taiKhams.length - 1); setView("followup");
   }
   async function saveFollowUp(data) {
     const fid = aaCase.taiKhams[editIdx].id;
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/aa/followups/${fid}`, { method: "PUT", body: JSON.stringify({ data }) });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/aa`);
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/${fid}`, { method: "PUT", body: JSON.stringify({ data }) });
+    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
     setAaCase(mapCaseFromApi(c)); setEditIdx(null); setView("timeline"); loadToday(); loadGpbWaitlist();
+  }
+  async function deletePatientRecord(maBN) {
+    await api(`/patients/${encodeURIComponent(maBN)}`, { method: "DELETE" });
+    setPatient(null); setAaCase(null); setMaBNInput(""); setView("home");
+    loadToday(); loadGpbWaitlist();
   }
   // ---------- xuất Excel thật (.xlsx) — tránh hoàn toàn lỗi font/dấu phân tách của CSV ----------
   function downloadXlsx(sheetName, headers, rows, filename) {
@@ -1534,7 +1803,7 @@ function App() {
       <div className="grid sm:grid-cols-2 gap-3">
         {DISEASES.map((dz) => (
           <button key={dz.k} disabled={!dz.active || !user.can_create}
-            onClick={() => dz.active && user.can_create && createCase()}
+            onClick={() => dz.active && user.can_create && createCase(dz.k.toLowerCase())}
             className={`text-left px-4 py-3 rounded-md border text-sm ${dz.active ? "border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100" : "border-gray-200 bg-gray-50 text-gray-400"} ${(!dz.active || !user.can_create) ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
             <div className="font-medium">{dz.l}</div>
             {!dz.active && <div className="text-xs mt-0.5">Sắp ra mắt</div>}
@@ -1548,7 +1817,9 @@ function App() {
         <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ <b>{aaCase.maLuuTru}</b></div>
         <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
       </div>
-      <NewCaseForm initial={aaCase.benhAnMoi} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />
+      {currentDisease === "aga"
+        ? <NewAGAForm initial={aaCase.benhAnMoi} patientGioiTinh={patient.gioiTinh} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />
+        : <NewCaseForm initial={aaCase.benhAnMoi} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />}
     </div>}
 
     {view === "timeline" && patient && aaCase && <div>
@@ -1558,10 +1829,11 @@ function App() {
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-sm bg-gray-100 rounded-md hover:bg-gray-200" onClick={() => setView("newCase")}>Xem/sửa bệnh án mới</button>
             {user.can_create && <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-md hover:bg-teal-700" onClick={createFollowup}>+ Tạo mã tái khám mới</button>}
+            {user.can_export && <button className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá toàn bộ hồ sơ của "${patient.hoTen || patient.maBN}"? Không thể hoàn tác.`)) deletePatientRecord(patient.maBN); }}>Xoá hồ sơ</button>}
           </div>
         </div>
       </div>
-      {chartData.length > 1 && <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
+      {currentDisease === "aa" && chartData.length > 1 && <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
         <div className="text-sm font-medium text-gray-600 mb-2">Diễn tiến điểm SALT</div>
         <svg viewBox="0 0 600 140" style={{ width: "100%", maxHeight: 150 }}>
           <polyline fill="none" stroke="#0F6E56" strokeWidth="2" points={chartData.map((p, i) => `${20 + i * (560 / Math.max(1, chartData.length - 1))},${120 - (p.salt / 100) * 100}`).join(" ")} />
@@ -1572,11 +1844,23 @@ function App() {
         <div className="px-4 py-2 bg-gray-50 text-sm font-medium">Lịch sử khám</div>
         <div className="divide-y divide-gray-100">
           <div className="px-4 py-3 flex items-center justify-between text-sm">
-            <div><div className="font-medium">T0 — Bệnh án mới ({aaCase.benhAnMoi?.ngayKham || "chưa có ngày"})</div><div className="text-xs text-gray-400">SALT {fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · {aaCase.benhAnMoi?.theLamSang || "—"}</div></div>
+            <div><div className="font-medium">T0 — Bệnh án mới ({aaCase.benhAnMoi?.ngayKham || "chưa có ngày"})</div>
+              <div className="text-xs text-gray-400">
+                {currentDisease === "aga"
+                  ? `Hamilton-Norwood ${aaCase.benhAnMoi?.hamiltonNorwood || "—"} · Sinclair ${aaCase.benhAnMoi?.sinclairScale || "—"}`
+                  : `SALT ${fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · ${aaCase.benhAnMoi?.theLamSang || "—"}`}
+              </div>
+            </div>
             <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
           </div>
           {(aaCase.taiKhams || []).map((tk, i) => { const s = calcSalt(tk.vung || {}); return <button key={i} onClick={() => { setEditIdx(i); setView("followup"); }} className="w-full text-left px-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50">
-            <div><div className="font-medium">Tái khám {i + 1} ({tk.ngayKham || "chưa có ngày"})</div><div className="text-xs text-gray-400">SALT {fmt(s)}{tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}</div></div>
+            <div><div className="font-medium">Tái khám {i + 1} ({tk.ngayKham || "chưa có ngày"})</div>
+              <div className="text-xs text-gray-400">
+                {currentDisease === "aga"
+                  ? `Hamilton-Norwood ${tk.hamiltonNorwood || "—"} · Sinclair ${tk.sinclairScale || "—"}`
+                  : `SALT ${fmt(s)}${tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}`}
+              </div>
+            </div>
             <span className="flex items-center"><ImageBadge data={tk} /><GpbBadge data={tk} /><StatusBadge done={tk.daDienDuLieu} /></span>
           </button>; })}
           {(aaCase.taiKhams || []).length === 0 && <div className="px-4 py-3 text-sm text-gray-400">Chưa có lần tái khám nào.</div>}
@@ -1589,7 +1873,9 @@ function App() {
         <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
         <span className="flex items-center"><ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} /></span>
       </div>
-      <FollowUpForm initial={aaCase.taiKhams[editIdx]} saltT0={calcSalt(aaCase.benhAnMoi?.vung || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+      {currentDisease === "aga"
+        ? <AGAFollowUpForm initial={aaCase.taiKhams[editIdx]} patientGioiTinh={patient.gioiTinh} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+        : <FollowUpForm initial={aaCase.taiKhams[editIdx]} saltT0={calcSalt(aaCase.benhAnMoi?.vung || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />}
     </div>}
   </div></FieldMetaProvider>;
 }
