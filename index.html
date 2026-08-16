@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect } = React;
 
@@ -542,6 +541,17 @@ function ImageBadge({ data }) {
   return has
     ? <span className="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-xs mr-1.5">Ảnh</span>
     : <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs mr-1.5">Ảnh</span>;
+}
+// Ký hiệu màu đặt trước mỗi bản ghi để nhận biết nhanh thuộc bệnh nào — AA đỏ, AGA xanh, NONSCAR (NS) vàng
+const DISEASE_TAG_STYLE = {
+  AA: "bg-red-100 text-red-700",
+  AGA: "bg-blue-100 text-blue-700",
+  NONSCAR: "bg-amber-100 text-amber-800",
+};
+function DiseaseTag({ benh }) {
+  if (!benh) return null;
+  const label = benh === "NONSCAR" ? "NS" : benh;
+  return <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mr-1.5 ${DISEASE_TAG_STYLE[benh] || "bg-gray-100 text-gray-600"}`}>{label}</span>;
 }
 
 // ---------- biểu đồ nhỏ, tự vẽ bằng SVG (không phụ thuộc thư viện ngoài) ----------
@@ -1755,7 +1765,7 @@ function App() {
   const [editIdx, setEditIdx] = useState(null);
   const [today, setToday] = useState([]);
   const [gpbWaitlist, setGpbWaitlist] = useState([]);
-  const [searchFilters, setSearchFilters] = useState({ tenBN: "", tuNgay: "", denNgay: "", mucDo: "", dieuTriChua: "", xetNghiemCo: "", chiChuaDien: false, soLuotTaiKhamItNhat: "" });
+  const [searchFilters, setSearchFilters] = useState({ tenBN: "", tuNgay: "", denNgay: "", benh: "", dieuTriChua: "", xetNghiemCo: "", chiChuaDien: false, soLuotTaiKhamItNhat: "" });
   const [searchResults, setSearchResults] = useState(null);
   const [todayFilter, setTodayFilter] = useState("");
   const [chartStats, setChartStats] = useState({ visitType: [], disease: [] });
@@ -1820,7 +1830,7 @@ function App() {
     if (f.tenBN) params.set("ten_bn", f.tenBN);
     if (f.tuNgay) params.set("tu_ngay", f.tuNgay);
     if (f.denNgay) params.set("den_ngay", f.denNgay);
-    if (f.mucDo) params.set("muc_do", f.mucDo);
+    if (f.benh) params.set("benh", f.benh);
     if (f.dieuTriChua) params.set("dieu_tri_chua", f.dieuTriChua);
     if (f.xetNghiemCo) params.set("xet_nghiem_co", f.xetNghiemCo);
     if (f.chiChuaDien) params.set("chi_chua_dien", "true");
@@ -1979,7 +1989,7 @@ function App() {
 
   // Bản tóm tắt: mỗi dòng 1 lần khám, chỉ các cột cốt lõi hay dùng để lọc/thống kê nhanh
   async function exportExcelTomTat() {
-    const groups = await api("/export/raw");
+    const groups = await api(`/export/raw${searchFilters.benh ? `?benh=${searchFilters.benh}` : ""}`);
     const headers = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay", "saltScore", "mucDoNang", "dieuTri"];
     const rows = [];
     for (const { benh, maBN, case: c, patient: p } of groups) {
@@ -1996,7 +2006,7 @@ function App() {
 
   // Bản đầy đủ theo LẦN KHÁM: mỗi dòng 1 lần khám, cột đặt tên theo quy ước mục_trường
   async function exportExcelDayDuTheoLanKham() {
-    const groups = await api("/export/raw");
+    const groups = await api(`/export/raw${searchFilters.benh ? `?benh=${searchFilters.benh}` : ""}`);
     const baseCols = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay"];
     const records = [];
     for (const { benh, maBN, case: c, patient: p } of groups) {
@@ -2015,7 +2025,7 @@ function App() {
 
   // Bản đầy đủ theo BỆNH NHÂN (wide): mỗi dòng 1 bệnh nhân, cột T0_/T1_/T2_... theo từng lần khám
   async function exportExcelDayDuTheoBenhNhan() {
-    const groups = await api("/export/raw");
+    const groups = await api(`/export/raw${searchFilters.benh ? `?benh=${searchFilters.benh}` : ""}`);
     const perPatient = [];
     let maxVisits = 0;
     for (const { benh, maBN, case: c, patient: p } of groups) {
@@ -2084,7 +2094,7 @@ function App() {
                 .slice()
                 .sort((a, b) => (a.daDienDuLieu === b.daDienDuLieu ? 0 : a.daDienDuLieu ? 1 : -1))
                 .map((r, i) => <button key={i} onClick={() => openRecord(r)} className="w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50">
-                  <span>{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru})</span></span>
+                  <span><DiseaseTag benh={r.benh} />{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru})</span></span>
                   <span className="flex items-center"><ImageBadge data={r.record} /><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
                 </button>)}
             </div>
@@ -2097,7 +2107,7 @@ function App() {
             <div className="divide-y divide-gray-100">
               {gpbWaitlist.map((r, i) => <button key={i} onClick={() => openRecord(r)} className="w-full text-left py-1.5 hover:bg-gray-50">
                 <div className="flex items-center justify-between text-sm gap-2">
-                  <span className="truncate">{r.hoTen || r.maBN}</span>
+                  <span className="truncate flex items-center"><DiseaseTag benh={r.benh} />{r.hoTen || r.maBN}</span>
                   <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs whitespace-nowrap">{r.days} ngày</span>
                 </div>
                 <div className="text-xs text-gray-400">{r.loai} · {r.maLuuTru}</div>
@@ -2124,7 +2134,7 @@ function App() {
             <Field label="Từ ngày"><TextInput type="date" value={searchFilters.tuNgay} onChange={(v) => setSearchFilters({ ...searchFilters, tuNgay: v })} /></Field>
             <Field label="Đến ngày"><TextInput type="date" value={searchFilters.denNgay} onChange={(v) => setSearchFilters({ ...searchFilters, denNgay: v })} /></Field>
           </div>
-          <Field label="Mức độ nặng"><RadioGroup options={MUC_DO_LEVELS} value={searchFilters.mucDo} onChange={(v) => setSearchFilters({ ...searchFilters, mucDo: v === searchFilters.mucDo ? "" : v })} /></Field>
+          <Field label="Loại bệnh"><RadioGroup options={["AA", "AGA", "NONSCAR"]} value={searchFilters.benh} onChange={(v) => setSearchFilters({ ...searchFilters, benh: v === searchFilters.benh ? "" : v })} /></Field>
           <Field label="Điều trị">
             <select className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" value={searchFilters.dieuTriChua} onChange={(e) => setSearchFilters({ ...searchFilters, dieuTriChua: e.target.value })}>
               <option value="">— Không lọc —</option>
@@ -2145,17 +2155,18 @@ function App() {
             </select>
           </Field>
           <label className="flex items-center gap-2 text-sm mb-3 cursor-pointer"><input type="checkbox" checked={searchFilters.chiChuaDien} onChange={(e) => setSearchFilters({ ...searchFilters, chiChuaDien: e.target.checked })} />Chỉ hồ sơ chưa điền dữ liệu</label>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             <button className="px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={runSearch}>Tìm</button>
             {user.can_export && <button className="px-4 py-1.5 bg-gray-100 text-sm rounded-md hover:bg-gray-200" onClick={exportExcelTomTat}>Xuất Excel tóm tắt</button>}
             {user.can_export && <button className="px-4 py-1.5 bg-gray-100 text-sm rounded-md hover:bg-gray-200" onClick={exportExcelDayDuTheoLanKham}>Xuất Excel đầy đủ (theo lần khám)</button>}
             {user.can_export && <button className="px-4 py-1.5 bg-gray-100 text-sm rounded-md hover:bg-gray-200" onClick={exportExcelDayDuTheoBenhNhan}>Xuất Excel đầy đủ (theo bệnh nhân)</button>}
+            {user.can_export && <span className="text-xs text-gray-400">{searchFilters.benh ? `Chỉ xuất bệnh ${searchFilters.benh}` : "Xuất tất cả các bệnh"}</span>}
           </div>
           {searchResults && <div className="mt-3">
             <div className="text-xs text-gray-400 mb-1.5">{searchResults.length} kết quả{searchFilters.soLuotTaiKhamItNhat && ` — ${new Set(searchResults.map((r) => r.maBN)).size} bệnh nhân đủ ≥${searchFilters.soLuotTaiKhamItNhat} lượt tái khám`}</div>
             <div className="divide-y divide-gray-100">
               {searchResults.map((r, i) => <button key={i} onClick={() => openRecord(r)} className="w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50">
-                <span>{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru}, {r.ngay}){searchFilters.soLuotTaiKhamItNhat ? ` · tổng ${r.soLuotTK} lượt tái khám` : ""}</span> — {r.mucDo}</span>
+                <span><DiseaseTag benh={r.benh} />{r.loai} — {r.hoTen || r.maBN} <span className="text-gray-400">({r.maLuuTru}, {r.ngay}){searchFilters.soLuotTaiKhamItNhat ? ` · tổng ${r.soLuotTK} lượt tái khám` : ""}</span></span>
                 <span className="flex items-center"><ImageBadge data={r.record} /><GpbBadge data={r.record} /><StatusBadge done={r.daDienDuLieu} /></span>
               </button>)}
             </div>
@@ -2203,7 +2214,7 @@ function App() {
 
     {view === "newCase" && patient && aaCase && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ <b>{aaCase.maLuuTru}</b></div>
+        <div className="text-sm text-gray-500 flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN} · Mã lưu trữ <b className="ml-1">{aaCase.maLuuTru}</b></div>
         <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
       </div>
       {currentDisease === "aga"
@@ -2216,7 +2227,7 @@ function App() {
     {view === "timeline" && patient && aaCase && <div>
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div><div className="font-medium">{patient.hoTen} — {patient.maBN}</div><div className="text-xs text-gray-400">Mã lưu trữ {aaCase.maLuuTru} · {patient.gioiTinh}, sinh {patient.namSinh}</div></div>
+          <div><div className="font-medium flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN}</div><div className="text-xs text-gray-400">Mã lưu trữ {aaCase.maLuuTru} · {patient.gioiTinh}, sinh {patient.namSinh}</div></div>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-sm bg-gray-100 rounded-md hover:bg-gray-200" onClick={() => setView("newCase")}>Xem/sửa bệnh án mới</button>
             {user.can_create && <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-md hover:bg-teal-700" onClick={createFollowup}>+ Tạo mã tái khám mới</button>}
@@ -2235,7 +2246,7 @@ function App() {
         <div className="px-4 py-2 bg-gray-50 text-sm font-medium">Lịch sử khám</div>
         <div className="divide-y divide-gray-100">
           <div className="px-4 py-3 flex items-center justify-between text-sm">
-            <div><div className="font-medium">T0 — Bệnh án mới ({aaCase.benhAnMoi?.ngayKham || "chưa có ngày"})</div>
+            <div><div className="font-medium flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />T0 — Bệnh án mới ({aaCase.benhAnMoi?.ngayKham || "chưa có ngày"})</div>
               <div className="text-xs text-gray-400">
                 {currentDisease === "aga"
                   ? `Hamilton-Norwood ${aaCase.benhAnMoi?.hamiltonNorwood || "—"} · Sinclair ${aaCase.benhAnMoi?.sinclairScale || "—"}`
@@ -2247,7 +2258,7 @@ function App() {
             <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
           </div>
           {(aaCase.taiKhams || []).map((tk, i) => { const s = calcSalt(tk.vung || {}); return <button key={i} onClick={() => { setEditIdx(i); setView("followup"); }} className="w-full text-left px-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50">
-            <div><div className="font-medium">Tái khám {i + 1} ({tk.ngayKham || "chưa có ngày"})</div>
+            <div><div className="font-medium flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />Tái khám {i + 1} ({tk.ngayKham || "chưa có ngày"})</div>
               <div className="text-xs text-gray-400">
                 {currentDisease === "aga"
                   ? `Hamilton-Norwood ${tk.hamiltonNorwood || "—"} · Sinclair ${tk.sinclairScale || "—"}`
@@ -2265,7 +2276,7 @@ function App() {
 
     {view === "followup" && patient && aaCase && editIdx !== null && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="text-sm text-gray-500">{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
+        <div className="text-sm text-gray-500 flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
         <span className="flex items-center"><ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} /></span>
       </div>
       {currentDisease === "aga"
