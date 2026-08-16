@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect } = React;
 
@@ -113,7 +112,7 @@ function mapCaseFromApi(c) {
   };
 }
 function mapPatientFromApi(p) {
-  return { maBN: p.ma_bn, hoTen: p.ho_ten, gioiTinh: p.gioi_tinh, namSinh: p.nam_sinh, diaChi: p.dia_chi, sdt: p.sdt };
+  return { maBN: p.ma_bn, hoTen: p.ho_ten, gioiTinh: p.gioi_tinh, namSinh: p.nam_sinh, danToc: p.dan_toc, diaChi: p.dia_chi, sdt: p.sdt };
 }
 
 const BAC_SI = ["BS Hà Vinh", "BS Tuỳ", "BS Xuân", "BS Tráng", "BS Trang", "BS Ngọc Anh"];
@@ -173,6 +172,10 @@ const DERMOSCOPY_AGA = ["Đa dạng đường kính sợi tóc", "Dấu hiệu c
 const THUOC_UONG_AGA = ["Finasteride", "Dutasteride", "Spironolacton", "Vitamin", "Khác"];
 const THUOC_BOI_AGA = ["Dưỡng chất Radical", "Minoxidil", "Khác"];
 const THU_THUAT_AGA = ["Lăn kim", "Botox da đầu", "PRP", "Mesotherapy", "Cấy tóc", "Khác"];
+const THUOC_UONG_AA = ["Corticoid liều xung", "Corticoid hàng ngày", "Cyclosporin", "MTX", "TAK", "Khác"];
+const THUOC_BOI_AA = ["Neutasol", "Corticoid bôi", "Khác"];
+const THU_THUAT_AA = ["Tiêm nội tổn thương TAC", "Lăn kim kèm bôi TAC", "Khác"];
+const THUOC_UONG_NS = ["Vitamin", "Khác"];
 
 // ---------- hằng số riêng cho bệnh Rụng tóc không sẹo ----------
 const TIENSU_BANTHAN_NONSCAR = ["Viêm da dầu", "Mụn trứng cá", "Mang thai hoặc trong 6 tháng sau sinh (nữ)", "Bệnh lý tuyến giáp", "Buồng trứng đa nang (nữ)", "Đái tháo đường/kháng insulin/lupus ban đỏ hệ thống", "Bệnh thận mạn giai đoạn cuối/gan mạn tính/giang mai", "Bệnh lý hệ thống cấp tính/sốt cao kéo dài/phẫu thuật lớn", "Sử dụng thuốc gây rụng tóc (Lithium, Valproate, Retinoids liều cao, Warfarin, Betablockers)", "Bổ sung vi chất (Sắt, Kẽm, Vitamin D, B12) trong 1 tháng gần nhất"];
@@ -220,14 +223,14 @@ const NEW_CASE_SECTIONS = {
   "Dermoscopy": ["dermoscopy"],
   "Cận lâm sàng": ["labs", "treponema", "viNam", "sieuAmTuyenGiap", "moBenhHoc", "il15", "il13", "ifnG", "ifnGMo", "il13Mo", "ngayLayMau"],
   "Giải phẫu bệnh": ["gpbCo"],
-  "Điều trị & thủ thuật": ["dieuTri", "vas", "tdkm", "henKham"],
+  "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
   "Hình ảnh": ["anh"],
 };
 const FOLLOWUP_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "tocToMoc", "mucDoSoVoiTruoc", "tacDungPhuStatus"],
   "Mức độ nặng (SALT)": ["soLuongMang", "vung", "mucDoDapUng", "mangDai", "mangRong", "mangViTri", "yeuToNangBac"],
   "Dermoscopy": ["dermoscopy", "vas", "tdkm"],
-  "Cận lâm sàng & điều trị": ["xnStatus", "xnKetQua", "dieuTri"],
+  "Cận lâm sàng & điều trị": ["xnStatus", "xnKetQua", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Hình ảnh": ["anh"],
 };
@@ -257,13 +260,13 @@ const NEW_NONSCAR_CASE_SECTIONS = {
   "Dermoscopy": ["dermoscopy"],
   "Cận lâm sàng": ["labs", "testNhanhGiangMai", "sieuAmTuyenGiap", "moBenhHoc", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
-  "Điều trị & thủ thuật": ["dieuTri", "henKham"],
+  "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
   "Hình ảnh": ["anh"],
 };
 const FOLLOWUP_NONSCAR_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "mucDoSoVoiTruoc"],
   "Giải phẫu bệnh": ["gpbCo"],
-  "Xét nghiệm & Điều trị": ["xnStatus", "dieuTri"],
+  "Xét nghiệm & Điều trị": ["xnStatus", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
   "Hình ảnh": ["anh"],
 };
 
@@ -413,7 +416,7 @@ function CheckboxGroup({ options, value, onChange }) {
 
 // ---------- điều trị: câu hỏi nhiều lựa chọn + mục khác — vẫn lưu thành 1 chuỗi "dieuTri" để
 // tương thích với tìm kiếm/thống kê/xuất Excel đã có (không cần đổi backend) ----------
-const TREATMENT_OPTIONS = ["Thuốc bôi", "TAC", "Corticoid liều xung", "Corticoid hàng ngày", "MTX", "CKD", "JAK"];
+const TREATMENT_OPTIONS = ["Corticoid liều xung", "Corticoid hàng ngày", "Cyclosporin", "MTX", "TAK", "Neutasol", "Corticoid bôi", "Tiêm nội tổn thương TAC", "Lăn kim kèm bôi TAC", "Khác"];
 function buildDieuTriString(chon, khac) {
   const parts = [...(chon || [])];
   if (khac && khac.trim()) parts.push(`Khác: ${khac.trim()}`);
@@ -501,6 +504,15 @@ function classifyTreatments(text) {
   const t = text.toLowerCase();
   const found = TREATMENT_KEYWORDS.filter((k) => t.includes(k.toLowerCase()));
   return found.length ? found : ["Khác"];
+}
+// Ghép 3 mục điều trị (thuốc uống/thuốc bôi/thủ thuật) thành 1 chuỗi tóm tắt — vẫn cần cho
+// biểu đồ thống kê điều trị ở trang chủ và tương thích với dữ liệu cũ (đều đọc trường "dieuTri").
+function buildTreatmentSummary(d) {
+  const parts = [];
+  if (d.thuocUongCo === "Có" && d.thuocUongLoai) parts.push(`Thuốc uống: ${d.thuocUongLoai}${d.thuocUongLoai === "Khác" && d.thuocUongKhac ? ` (${d.thuocUongKhac})` : ""}`);
+  if (d.thuocBoiCo === "Có" && d.thuocBoiLoai) parts.push(`Thuốc bôi: ${d.thuocBoiLoai}${d.thuocBoiLoai === "Khác" && d.thuocBoiKhac ? ` (${d.thuocBoiKhac})` : ""}`);
+  if (d.thuThuatCo === "Có" && d.thuThuatLoai) parts.push(`Thủ thuật: ${d.thuThuatLoai}${d.thuThuatLoai === "Khác" && d.thuThuatKhac ? ` (${d.thuThuatKhac})` : ""}`);
+  return parts.join("; ");
 }
 
 // ---------- trạng thái Giải phẫu bệnh (GPB) ----------
@@ -780,8 +792,17 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
     </div>}
 
     {tab === 7 && <div>
-      <Field label="Điều trị"><TreatmentPicker chon={d.dieuTriChon} khac={d.dieuTriKhac} onChange={setDieuTri} /></Field>
-      <div className="mt-2"><div className="text-sm font-medium text-gray-700 mb-1">Đối với bệnh nhân dùng thủ thuật</div>
+      <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_AA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+      <AGATreatmentSection label="Thuốc bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_AA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_AA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+      {d.thuThuatCo === "Có" && <div className="mt-2 border-t border-gray-200 pt-3">
+        <div className="text-sm font-medium text-gray-700 mb-1">Theo dõi sau thủ thuật</div>
         <Field label="Điểm đau VAS trong thủ thuật (0-10)"><TextInput type="number" value={d.vas} onChange={(v) => set("vas", v)} /></Field>
         <div className="grid sm:grid-cols-3 gap-x-4">
           {[["Ngay sau thủ thuật", TDKM_NGAY], ["Sớm (<72h)", TDKM_SOM], ["Muộn (>72h)", TDKM_MUON]].map(([title, list]) => (
@@ -794,7 +815,7 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
       <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
     </div>}
 
@@ -806,7 +827,7 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(NEW_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_CASE_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={() => onSave({ ...d, dieuTri: buildTreatmentSummary(d) })} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -896,7 +917,15 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
         <RadioGroup options={["Không", "Có"]} value={d.xnStatus} onChange={(v) => set("xnStatus", v)} />
         {d.xnStatus === "Có" && <div className="mt-1"><TextArea value={d.xnKetQua} onChange={(v) => set("xnKetQua", v)} /></div>}
       </Field>
-      <Field label="Điều trị"><TreatmentPicker chon={d.dieuTriChon} khac={d.dieuTriKhac} onChange={setDieuTri} /></Field>
+      <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_AA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+      <AGATreatmentSection label="Thuốc bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_AA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_AA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
     </div>}
 
     {tab === 4 && <div>
@@ -916,7 +945,7 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(FOLLOWUP_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={() => onSave({ ...d, dieuTri: buildTreatmentSummary(d) })} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -1328,7 +1357,15 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
     </div>}
 
     {tab === 6 && <div>
-      <Field label="Điều trị"><TextArea value={d.dieuTri} onChange={(v) => set("dieuTri", v)} rows={4} /></Field>
+      <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_NS} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+      <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
       <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
     </div>}
 
@@ -1387,7 +1424,15 @@ function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
         <RadioGroup options={["Không", "Có"]} value={d.xnStatus} onChange={(v) => set("xnStatus", v)} />
         {d.xnStatus === "Có" && <div className="mt-1"><TextArea value={d.xnKetQua} onChange={(v) => set("xnKetQua", v)} /></div>}
       </Field>
-      <Field label="Điều trị"><TextArea value={d.dieuTri} onChange={(v) => set("dieuTri", v)} rows={4} /></Field>
+      <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_NS} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+      <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
     </div>}
 
     {tab === 3 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
@@ -1712,7 +1757,7 @@ function App() {
   const [searchFilters, setSearchFilters] = useState({ tenBN: "", tuNgay: "", denNgay: "", mucDo: "", dieuTriChua: "", xetNghiemCo: "", chiChuaDien: false, soLuotTaiKhamItNhat: "" });
   const [searchResults, setSearchResults] = useState(null);
   const [todayFilter, setTodayFilter] = useState("");
-  const [chartStats, setChartStats] = useState({ visitType: [], disease: [], treatment: [] });
+  const [chartStats, setChartStats] = useState({ visitType: [], disease: [] });
 
   useEffect(() => { if (user) { loadToday(); loadGpbWaitlist(); } }, [user]);
 
@@ -1750,27 +1795,23 @@ function App() {
   async function loadToday() {
     const res = await api("/dashboard/today");
     const out = res.danh_sach.map((r) => ({
-      loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru,
+      loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, benh: r.benh,
       daDienDuLieu: !!r.da_dien_du_lieu, followupId: r.followup_id,
       record: { dieuTri: r.dieu_tri, gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua, hasAnh: r.has_anh },
     }));
     setToday(out);
-    let newCount = 0, followupCount = 0; const treatmentCounts = {};
-    res.danh_sach.forEach((r) => {
-      if (r.loai === "Bệnh án mới") newCount++; else followupCount++;
-      classifyTreatments(r.dieu_tri).forEach((k) => { treatmentCounts[k] = (treatmentCounts[k] || 0) + 1; });
-    });
+    let newCount = 0, followupCount = 0;
+    res.danh_sach.forEach((r) => { if (r.loai === "Bệnh án mới") newCount++; else followupCount++; });
     const diseaseCounts = {};
     res.danh_sach.forEach((r) => { diseaseCounts[r.benh || "AA"] = (diseaseCounts[r.benh || "AA"] || 0) + 1; });
     setChartStats({
       visitType: [{ label: "Khám mới", value: newCount }, { label: "Tái khám", value: followupCount }],
       disease: Object.keys(diseaseCounts).map((k) => ({ label: k, value: diseaseCounts[k] })),
-      treatment: Object.keys(treatmentCounts).map((k) => ({ label: k, value: treatmentCounts[k] })),
     });
   }
   async function loadGpbWaitlist() {
     const res = await api("/gpb/waitlist");
-    setGpbWaitlist(res.map((r) => ({ loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, days: r.days, followupId: r.followup_id })));
+    setGpbWaitlist(res.map((r) => ({ loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, benh: r.benh, days: r.days, followupId: r.followup_id })));
   }
   async function runSearch() {
     const f = searchFilters;
@@ -1785,7 +1826,7 @@ function App() {
     if (f.soLuotTaiKhamItNhat) params.set("so_luot_tai_kham_it_nhat", f.soLuotTaiKhamItNhat);
     const res = await api(`/cases/search?${params.toString()}`);
     setSearchResults(res.ket_qua.map((r) => ({
-      loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, ngay: r.ngay,
+      loai: r.loai, maBN: r.ma_bn, hoTen: r.ho_ten, maLuuTru: r.ma_luu_tru, ngay: r.ngay, benh: r.benh,
       mucDo: r.muc_do_nang, daDienDuLieu: !!r.da_dien_du_lieu, followupId: r.followup_id, soLuotTK: r.so_luot_tai_kham,
       record: { gpbCo: r.gpb_co, gpbNgayThucHien: r.gpb_ngay_thuc_hien, gpbKetQua: r.gpb_ket_qua, hasAnh: r.has_anh },
     })));
@@ -1816,13 +1857,14 @@ function App() {
   async function openRecord(row) {
     const p = await api(`/patients/${encodeURIComponent(row.maBN)}`);
     setPatient(mapPatientFromApi(p));
-    const c = await api(`/cases/${encodeURIComponent(row.maBN)}/aa`);
-    const cc = mapCaseFromApi(c); setAaCase(cc);
+    const diseasePath = (row.benh || "AA").toLowerCase();
+    const c = await api(`/cases/${encodeURIComponent(row.maBN)}/${diseasePath}`);
+    const cc = mapCaseFromApi(c); setAaCase(cc); setCurrentDisease(diseasePath);
     if (row.followupId === null) { setView("newCase"); }
     else { const idx = cc.taiKhams.findIndex((tk) => tk.id === row.followupId); setEditIdx(idx >= 0 ? idx : 0); setView("followup"); }
   }
   async function savePatientAndGoChoose(p) {
-    await api("/patients", { method: "POST", body: JSON.stringify({ ma_bn: p.maBN, ho_ten: p.hoTen, gioi_tinh: p.gioiTinh, nam_sinh: p.namSinh ? Number(p.namSinh) : null, dia_chi: p.diaChi, sdt: p.sdt }) });
+    await api("/patients", { method: "POST", body: JSON.stringify({ ma_bn: p.maBN, ho_ten: p.hoTen, gioi_tinh: p.gioiTinh, nam_sinh: p.namSinh ? Number(p.namSinh) : null, dan_toc: p.danToc, dia_chi: p.diaChi, sdt: p.sdt }) });
     setPatient(p); setView("chooseDisease");
   }
   async function createCase(disease) {
@@ -1893,8 +1935,28 @@ function App() {
     labs: "5_CLS", treponema: "5_CLS", viNam: "5_CLS", sieuAmTuyenGiap: "5_CLS", moBenhHoc: "5_CLS",
     il15: "5_CLS", il13: "5_CLS", ifnG: "5_CLS", ifnGMo: "5_CLS", il13Mo: "5_CLS", ngayLayMau: "5_CLS", xnStatus: "5_CLS", xnKetQua: "5_CLS",
     dieuTri: "6_Dieutri", dieuTriChon: "6_Dieutri", dieuTriKhac: "6_Dieutri", vas: "6_Dieutri", tdkm: "6_Dieutri", henKham: "6_Dieutri", tacDungPhuStatus: "6_Dieutri", tacDungPhuChiTiet: "6_Dieutri",
+    thuocUongCo: "6_Dieutri", thuocUongLoai: "6_Dieutri", thuocUongKhac: "6_Dieutri",
+    thuocBoiCo: "6_Dieutri", thuocBoiLoai: "6_Dieutri", thuocBoiKhac: "6_Dieutri",
+    thuThuatCo: "6_Dieutri", thuThuatLoai: "6_Dieutri", thuThuatKhac: "6_Dieutri",
     anh: "7_Anh",
     gpbCo: "8_GPB", gpbNgayThucHien: "8_GPB", gpbKetQua: "8_GPB",
+    // trường riêng của AGA / Rụng tóc không sẹo
+    luuHuyetTuong: "0_HC", luuHuyetThanh: "0_HC",
+    thoiGianKhoiPhat: "1_BSTS", rungTocTruocDay: "1_BSTS", soLanTaiPhat: "1_BSTS", anKiengGiamCan: "1_BSTS", benhLyKhac: "1_BSTS",
+    coNangDaDau: "2_Kham", vongBung: "2_Kham", batThuongCoQuan: "2_Kham", viTriRungToc: "2_Kham",
+    pullTestStatus: "2_Kham", pullTestSoSoi: "2_Kham", kieuRungToc: "2_Kham", dauHieuViemSeoTeoDa: "2_Kham",
+    vungTocThua: "2_Kham", mongBatThuong: "2_Kham", rungLongMayMi: "2_Kham",
+    dauHieuCuongAndrogen: "2_Kham", phanBoRungToc: "2_Kham", matDoToc: "2_Kham", duongKinhSoiToc: "2_Kham",
+    hamiltonNorwood: "3_ThangDiem", sinclairScale: "3_ThangDiem", ludwig: "3_ThangDiem", pcos: "3_ThangDiem",
+    sieuAmOBung: "5_CLS", testNhanhGiangMai: "5_CLS", xnKhac: "5_CLS",
+    hairArea: "4_Dermoscopy", hairCountGeneral: "4_Dermoscopy", hairDensityGeneral: "4_Dermoscopy",
+    hairCountRelevant: "4_Dermoscopy", hairDensityRelevant: "4_Dermoscopy",
+    hairRateAnagen: "4_Dermoscopy", hairRateTelogen: "4_Dermoscopy", meanLength: "4_Dermoscopy",
+    hairCountAnagen: "4_Dermoscopy", hairCountTelogen: "4_Dermoscopy", hairDensityAnagen: "4_Dermoscopy", hairDensityTelogen: "4_Dermoscopy",
+    hairRateTerminal: "4_Dermoscopy", hairRateVellus: "4_Dermoscopy", meanThickness: "4_Dermoscopy",
+    hairCountTerminal: "4_Dermoscopy", hairCountVellus: "4_Dermoscopy", hairDensityTerminal: "4_Dermoscopy", hairDensityVellus: "4_Dermoscopy",
+    cumulativeThickness: "4_Dermoscopy", dermoscopyKhac: "4_Dermoscopy",
+    vungTran: "4_Dermoscopy", vungDinh: "4_Dermoscopy", vungCham: "4_Dermoscopy",
   };
   const CONTAINER_ABBR = { vung: null, dermoscopy: null, labs: null, tdkm: "tdkm", tienSuBanThan: "tsbt", tienSuGiaDinh: "tsgd" };
   function stripDiacritics(s) {
@@ -1917,25 +1979,29 @@ function App() {
   // Bản tóm tắt: mỗi dòng 1 lần khám, chỉ các cột cốt lõi hay dùng để lọc/thống kê nhanh
   async function exportExcelTomTat() {
     const groups = await api("/export/raw");
-    const headers = ["maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "lanKham", "ngay", "saltScore", "mucDoNang", "dieuTri"];
+    const headers = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay", "saltScore", "mucDoNang", "dieuTri"];
     const rows = [];
-    for (const { maBN, case: c, patient: p } of groups) {
-      const saltT0 = calcSalt(c.benhAnMoi?.vung || {});
-      rows.push([c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", "T0", c.ngayTao, fmt(saltT0), mucDoSauDieuChinh(saltT0, c.benhAnMoi?.yeuToNangBac), c.benhAnMoi?.dieuTri || ""]);
-      (c.taiKhams || []).forEach((tk, i) => { const s = calcSalt(tk.vung || {}); rows.push([c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", `Tái khám ${i + 1}`, tk.ngayKham, fmt(s), mucDoSauDieuChinh(s, tk.yeuToNangBac), tk.dieuTri || ""]); });
+    for (const { benh, maBN, case: c, patient: p } of groups) {
+      const isAA = benh === "AA"; // SALT chỉ áp dụng cho AA, các bệnh khác để trống thay vì hiện số gây hiểu nhầm
+      const saltT0 = isAA ? calcSalt(c.benhAnMoi?.vung || {}) : null;
+      rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao, isAA ? fmt(saltT0) : "", isAA ? mucDoSauDieuChinh(saltT0, c.benhAnMoi?.yeuToNangBac) : "", c.benhAnMoi?.dieuTri || ""]);
+      (c.taiKhams || []).forEach((tk, i) => {
+        const s = isAA ? calcSalt(tk.vung || {}) : null;
+        rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham, isAA ? fmt(s) : "", isAA ? mucDoSauDieuChinh(s, tk.yeuToNangBac) : "", tk.dieuTri || ""]);
+      });
     }
-    downloadXlsx("Tóm tắt", headers, rows, "aa_tomtat.xlsx");
+    downloadXlsx("Tóm tắt", headers, rows, "tomtat.xlsx");
   }
 
   // Bản đầy đủ theo LẦN KHÁM: mỗi dòng 1 lần khám, cột đặt tên theo quy ước mục_trường
   async function exportExcelDayDuTheoLanKham() {
     const groups = await api("/export/raw");
-    const baseCols = ["maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "lanKham", "ngay"];
+    const baseCols = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay"];
     const records = [];
-    for (const { maBN, case: c, patient: p } of groups) {
-      records.push({ base: [c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", "T0", c.ngayTao], flat: flattenRecord(c.benhAnMoi, "", {}) });
+    for (const { benh, maBN, case: c, patient: p } of groups) {
+      records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao], flat: flattenRecord(c.benhAnMoi, "", {}) });
       (c.taiKhams || []).forEach((tk, i) => {
-        records.push({ base: [c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", `Tái khám ${i + 1}`, tk.ngayKham], flat: flattenRecord(tk, "", {}) });
+        records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham], flat: flattenRecord(tk, "", {}) });
       });
     }
     const rawKeysSet = new Set();
@@ -1943,7 +2009,7 @@ function App() {
     const rawKeys = Array.from(rawKeysSet).sort((a, b) => buildColumnName(a).localeCompare(buildColumnName(b)));
     const headers = [...baseCols, ...rawKeys.map(buildColumnName)];
     const rows = records.map((r) => [...r.base, ...rawKeys.map((k) => r.flat[k] ?? "")]);
-    downloadXlsx("Đầy đủ theo lần khám", headers, rows, "aa_daydu_theolankham.xlsx");
+    downloadXlsx("Đầy đủ theo lần khám", headers, rows, "daydu_theolankham.xlsx");
   }
 
   // Bản đầy đủ theo BỆNH NHÂN (wide): mỗi dòng 1 bệnh nhân, cột T0_/T1_/T2_... theo từng lần khám
@@ -1951,10 +2017,10 @@ function App() {
     const groups = await api("/export/raw");
     const perPatient = [];
     let maxVisits = 0;
-    for (const { maBN, case: c, patient: p } of groups) {
+    for (const { benh, maBN, case: c, patient: p } of groups) {
       const visits = [flattenRecord(c.benhAnMoi, "", {}), ...(c.taiKhams || []).map((tk) => flattenRecord(tk, "", {}))];
       maxVisits = Math.max(maxVisits, visits.length);
-      perPatient.push({ maBN, hoTen: p?.hoTen || "", gioiTinh: p?.gioiTinh || "", namSinh: p?.namSinh || "", maHoSo: c.maLuuTru, visits });
+      perPatient.push({ benh, maBN, hoTen: p?.hoTen || "", gioiTinh: p?.gioiTinh || "", namSinh: p?.namSinh || "", danToc: p?.danToc || "", diaChi: p?.diaChi || "", sdt: p?.sdt || "", maHoSo: c.maLuuTru, visits });
     }
     const rawKeysPerSlot = [];
     for (let i = 0; i < maxVisits; i++) {
@@ -1962,17 +2028,17 @@ function App() {
       perPatient.forEach((pp) => { if (pp.visits[i]) Object.keys(pp.visits[i]).forEach((k) => set.add(k)); });
       rawKeysPerSlot.push(Array.from(set).sort((a, b) => buildColumnName(a).localeCompare(buildColumnName(b))));
     }
-    const headers = ["maBN", "hoTen", "gioiTinh", "namSinh", "maHoSo"];
+    const headers = ["benh", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "maHoSo"];
     for (let i = 0; i < maxVisits; i++) {
       const tPrefix = "T" + i;
       rawKeysPerSlot[i].forEach((k) => headers.push(`${tPrefix}_${buildColumnName(k)}`));
     }
     const rows = perPatient.map((pp) => {
-      const row = [pp.maBN, pp.hoTen, pp.gioiTinh, pp.namSinh, pp.maHoSo];
+      const row = [pp.benh, pp.maBN, pp.hoTen, pp.gioiTinh, pp.namSinh, pp.danToc, pp.diaChi, pp.sdt, pp.maHoSo];
       for (let i = 0; i < maxVisits; i++) rawKeysPerSlot[i].forEach((k) => row.push(pp.visits[i]?.[k] ?? ""));
       return row;
     });
-    downloadXlsx("Đầy đủ theo bệnh nhân", headers, rows, "aa_daydu_theobenhnhan.xlsx");
+    downloadXlsx("Đầy đủ theo bệnh nhân", headers, rows, "daydu_theobenhnhan.xlsx");
   }
 
   const chartData = aaCase ? [{ name: "T0", salt: fmt(calcSalt(aaCase.benhAnMoi?.vung || {})) }, ...(aaCase.taiKhams || []).map((tk, i) => ({ name: tk.ngayKham || `TK${i + 1}`, salt: fmt(calcSalt(tk.vung || {})) }))] : [];
@@ -2048,10 +2114,6 @@ function App() {
             <div className="text-xs text-gray-500 mb-1">Theo loại bệnh</div>
             <MiniPieChart data={chartStats.disease} size={140} />
           </div>
-          <div className="mt-5">
-            <div className="text-xs text-gray-500 mb-1">Phương pháp điều trị</div>
-            <MiniBarChart data={chartStats.treatment} color="#2563EB" />
-          </div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-5 order-2 lg:order-none lg:col-start-1 lg:row-start-2">
@@ -2061,10 +2123,6 @@ function App() {
             <Field label="Từ ngày"><TextInput type="date" value={searchFilters.tuNgay} onChange={(v) => setSearchFilters({ ...searchFilters, tuNgay: v })} /></Field>
             <Field label="Đến ngày"><TextInput type="date" value={searchFilters.denNgay} onChange={(v) => setSearchFilters({ ...searchFilters, denNgay: v })} /></Field>
           </div>
-          <Field label="Loại bệnh">
-            <RadioGroup options={DISEASES.map((d) => d.l)} value={DISEASES.find((d) => d.k === "AA").l} onChange={() => {}} />
-            <div className="text-xs text-gray-400 mt-1">Hiện chỉ có module AA hoạt động — bộ lọc sẽ có tác dụng khi thêm bệnh khác.</div>
-          </Field>
           <Field label="Mức độ nặng"><RadioGroup options={MUC_DO_LEVELS} value={searchFilters.mucDo} onChange={(v) => setSearchFilters({ ...searchFilters, mucDo: v === searchFilters.mucDo ? "" : v })} /></Field>
           <Field label="Điều trị">
             <select className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" value={searchFilters.dieuTriChua} onChange={(e) => setSearchFilters({ ...searchFilters, dieuTriChua: e.target.value })}>
@@ -2084,7 +2142,6 @@ function App() {
               <option value="">— Không lọc —</option>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>Ít nhất {n} lượt tái khám</option>)}
             </select>
-            <div className="text-xs text-gray-400 mt-1">Tìm bệnh nhân đủ số lượt tái khám, hiện toàn bộ lịch sử khám của họ (bỏ qua các bộ lọc ngày/mức độ/điều trị ở trên).</div>
           </Field>
           <label className="flex items-center gap-2 text-sm mb-3 cursor-pointer"><input type="checkbox" checked={searchFilters.chiChuaDien} onChange={(e) => setSearchFilters({ ...searchFilters, chiChuaDien: e.target.checked })} />Chỉ hồ sơ chưa điền dữ liệu</label>
           <div className="flex gap-2 flex-wrap">
@@ -2121,6 +2178,7 @@ function App() {
         <Field label="Họ và tên"><TextInput value={patient.hoTen} onChange={(v) => setPatient({ ...patient, hoTen: v })} /></Field>
         <Field label="Giới"><RadioGroup options={["Nam", "Nữ"]} value={patient.gioiTinh} onChange={(v) => setPatient({ ...patient, gioiTinh: v })} /></Field>
         <Field label="Năm sinh"><TextInput type="number" value={patient.namSinh} onChange={(v) => setPatient({ ...patient, namSinh: v })} /></Field>
+        <Field label="Dân tộc"><TextInput value={patient.danToc} onChange={(v) => setPatient({ ...patient, danToc: v })} /></Field>
         <Field label="Số điện thoại"><TextInput value={patient.sdt} onChange={(v) => setPatient({ ...patient, sdt: v })} /></Field>
         <Field label="Địa chỉ"><TextInput value={patient.diaChi} onChange={(v) => setPatient({ ...patient, diaChi: v })} /></Field>
       </div>
