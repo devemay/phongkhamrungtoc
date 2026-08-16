@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect } = React;
 
@@ -383,11 +382,25 @@ function FieldInfoIcon({ label }) {
 }
 
 // ---------- UI cơ bản ----------
+// Bấm Ctrl+S (hoặc Cmd+S trên Mac) để lưu ngay bản ghi đang điền, chặn hộp thoại "Lưu trang" mặc định của trình duyệt.
+function useCtrlSSave(onSave) {
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        onSave();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onSave]);
+}
 function Field({ label, children }) {
   return <div className="mb-3 relative"><label className="block text-sm text-gray-700 mb-1">{label}<FieldInfoIcon label={label} /></label>{children}</div>;
 }
-function TextInput({ value, onChange, type = "text", placeholder }) {
+function TextInput({ value, onChange, type = "text", placeholder, onEnter }) {
   return <input type={type} value={value ?? ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+    onKeyDown={onEnter ? (e) => { if (e.key === "Enter") onEnter(); } : undefined}
     className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />;
 }
 function TextArea({ value, onChange, rows = 3 }) {
@@ -417,7 +430,14 @@ function CheckboxGroup({ options, value, onChange }) {
 
 // ---------- điều trị: câu hỏi nhiều lựa chọn + mục khác — vẫn lưu thành 1 chuỗi "dieuTri" để
 // tương thích với tìm kiếm/thống kê/xuất Excel đã có (không cần đổi backend) ----------
-const TREATMENT_OPTIONS = ["Corticoid liều xung", "Corticoid hàng ngày", "Cyclosporin", "MTX", "TAK", "Neutasol", "Corticoid bôi", "Tiêm nội tổn thương TAC", "Lăn kim kèm bôi TAC", "Khác"];
+// Gộp toàn bộ lựa chọn điều trị của cả 3 bệnh (AA + AGA + Rụng tóc không sẹo) để tra cứu nâng cao
+// tìm được đúng — mỗi bệnh có bộ lựa chọn điều trị riêng, không dùng chung 1 danh sách như trước.
+const TREATMENT_OPTIONS = Array.from(new Set([
+  "Corticoid liều xung", "Corticoid hàng ngày", "Cyclosporin", "MTX", "TAK", "Neutasol", "Corticoid bôi", "Tiêm nội tổn thương TAC", "Lăn kim kèm bôi TAC",
+  "Finasteride", "Dutasteride", "Spironolacton", "Vitamin", "Dưỡng chất Radical", "Minoxidil",
+  "Lăn kim", "Botox da đầu", "PRP", "Mesotherapy", "Cấy tóc",
+  "Khác",
+]));
 function buildDieuTriString(chon, khac) {
   const parts = [...(chon || [])];
   if (khac && khac.trim()) parts.push(`Khác: ${khac.trim()}`);
@@ -486,7 +506,7 @@ function StatusBadge({ done }) {
 
 // ---------- danh sách xét nghiệm dùng cho bộ lọc "Xét nghiệm có" ----------
 const XET_NGHIEM_OPTIONS = [
-  ...LABS.map(([k, l]) => ({ path: `labs.${k}`, label: l })),
+  ...LABS.map(([k, l]) => ({ path: `labs.${k}`, label: `${l} (AA)` })),
   { path: "il15", label: "IL-15 huyết thanh" },
   { path: "il13", label: "IL-13 huyết thanh" },
   { path: "ifnG", label: "IFN-γ huyết thanh" },
@@ -496,6 +516,9 @@ const XET_NGHIEM_OPTIONS = [
   { path: "moBenhHoc", label: "Mô bệnh học" },
   { path: "treponema", label: "Treponema pallidum" },
   { path: "viNam", label: "Vi nấm soi tươi" },
+  ...LABS_AGA.map(([k, l]) => ({ path: `labs.${k}`, label: `${l} (AGA)` })),
+  { path: "sieuAmOBung", label: "Siêu âm ổ bụng (buồng trứng)" },
+  { path: "testNhanhGiangMai", label: "Test nhanh giang mai" },
 ];
 
 // ---------- phân loại phương pháp điều trị theo từ khoá (dieuTri là văn bản tự do) ----------
@@ -677,6 +700,8 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
   const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
   const saltTotal = calcSalt(d.vung || {});
@@ -839,7 +864,7 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(NEW_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_CASE_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave({ ...d, dieuTri: buildTreatmentSummary(d) })} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -849,6 +874,8 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
   const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const saltNow = calcSalt(d.vung || {});
   const pctRegrowth = saltT0 > 0 ? fmt((saltT0 - saltNow) / saltT0 * 100) : null;
@@ -957,7 +984,7 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(FOLLOWUP_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave({ ...d, dieuTri: buildTreatmentSummary(d) })} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -970,6 +997,8 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
 
   return <div>
@@ -1119,7 +1148,7 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
     {(() => { const missing = Object.keys(NEW_AGA_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_AGA_CASE_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -1129,6 +1158,8 @@ function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadIma
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
   const showSinclair = patientGioiTinh === "Nữ";
 
   return <div>
@@ -1217,7 +1248,7 @@ function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadIma
     {(() => { const missing = Object.keys(FOLLOWUP_AGA_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -1230,6 +1261,8 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
 
   return <div>
@@ -1389,7 +1422,7 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(NEW_NONSCAR_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_NONSCAR_CASE_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -1399,6 +1432,8 @@ function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
 
   return <div>
     <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
@@ -1455,7 +1490,7 @@ function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
     {(() => { const missing = Object.keys(FOLLOWUP_NONSCAR_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_NONSCAR_SECTIONS[s]));
       return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
-      <button onClick={() => onSave(d)} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
   </div>;
@@ -1471,8 +1506,8 @@ function LoginScreen({ onLogin }) {
   };
   return <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-sm mx-auto mt-10">
     <div className="text-lg font-medium mb-4">Đăng nhập hệ thống bệnh án AA</div>
-    <Field label="Tên đăng nhập"><TextInput value={u} onChange={setU} /></Field>
-    <Field label="Mật khẩu"><TextInput type="password" value={p} onChange={setP} /></Field>
+    <Field label="Tên đăng nhập"><TextInput value={u} onChange={setU} onEnter={submit} /></Field>
+    <Field label="Mật khẩu"><TextInput type="password" value={p} onChange={setP} onEnter={submit} /></Field>
     {err && <div className="text-red-600 text-xs mb-2">{err}</div>}
     <button className="w-full px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={submit} disabled={busy}>{busy ? "Đang đăng nhập..." : "Đăng nhập"}</button>
   </div>;
@@ -1907,6 +1942,18 @@ function App() {
     setPatient(null); setAaCase(null); setMaBNInput(""); setView("home");
     loadToday(); loadGpbWaitlist();
   }
+  async function deleteCurrentCase() {
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`, { method: "DELETE" });
+    setAaCase(null); setView("chooseDisease");
+    loadToday(); loadGpbWaitlist();
+  }
+  async function deleteFollowupAt(idx) {
+    const fid = aaCase.taiKhams[idx].id;
+    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/${fid}`, { method: "DELETE" });
+    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
+    setAaCase(mapCaseFromApi(c)); setEditIdx(null); setView("timeline");
+    loadToday(); loadGpbWaitlist();
+  }
   // ---------- xuất Excel thật (.xlsx) — tránh hoàn toàn lỗi font/dấu phân tách của CSV ----------
   function downloadXlsx(sheetName, headers, rows, filename) {
     const ws = window.XLSX.utils.aoa_to_sheet([headers, ...rows]);
@@ -2075,7 +2122,7 @@ function App() {
 
     {view === "home" && <div className="grid lg:grid-cols-[2fr_2fr_1fr] gap-4 items-start">
         <div className="bg-white border border-gray-200 rounded-lg p-5 order-1 lg:order-none lg:col-start-1 lg:row-start-1">
-          <Field label="Tra cứu theo mã bệnh nhân"><div className="flex gap-2"><TextInput value={maBNInput} onChange={setMaBNInput} /><button className="px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 whitespace-nowrap" onClick={handleSearch}>Tra cứu</button></div></Field>
+          <Field label="Tra cứu theo mã bệnh nhân"><div className="flex gap-2"><TextInput value={maBNInput} onChange={setMaBNInput} onEnter={handleSearch} /><button className="px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 whitespace-nowrap" onClick={handleSearch}>Tra cứu</button></div></Field>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-5 order-3 lg:order-none lg:col-start-2 lg:row-start-2">
@@ -2130,12 +2177,20 @@ function App() {
 
         <div className="bg-white border border-gray-200 rounded-lg p-5 order-2 lg:order-none lg:col-start-1 lg:row-start-2">
           <div className="font-medium mb-2">Tra cứu nâng cao</div>
-          <Field label="Tên bệnh nhân"><TextInput value={searchFilters.tenBN} onChange={(v) => setSearchFilters({ ...searchFilters, tenBN: v })} /></Field>
+          <Field label="Tên bệnh nhân"><TextInput value={searchFilters.tenBN} onChange={(v) => setSearchFilters({ ...searchFilters, tenBN: v })} onEnter={runSearch} /></Field>
           <div className="grid sm:grid-cols-2 gap-x-6">
             <Field label="Từ ngày"><TextInput type="date" value={searchFilters.tuNgay} onChange={(v) => setSearchFilters({ ...searchFilters, tuNgay: v })} /></Field>
             <Field label="Đến ngày"><TextInput type="date" value={searchFilters.denNgay} onChange={(v) => setSearchFilters({ ...searchFilters, denNgay: v })} /></Field>
           </div>
-          <Field label="Loại bệnh"><RadioGroup options={["AA", "AGA", "NONSCAR"]} value={searchFilters.benh} onChange={(v) => setSearchFilters({ ...searchFilters, benh: v === searchFilters.benh ? "" : v })} /></Field>
+          <Field label="Loại bệnh">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {[["", "Tất cả"], ["AA", "AA"], ["AGA", "AGA"], ["NONSCAR", "NONSCAR"]].map(([val, label]) => (
+                <label key={label} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                  <input type="radio" checked={searchFilters.benh === val} onChange={() => setSearchFilters({ ...searchFilters, benh: val })} />{label}
+                </label>
+              ))}
+            </div>
+          </Field>
           <Field label="Điều trị">
             <select className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" value={searchFilters.dieuTriChua} onChange={(e) => setSearchFilters({ ...searchFilters, dieuTriChua: e.target.value })}>
               <option value="">— Không lọc —</option>
@@ -2232,6 +2287,7 @@ function App() {
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-sm bg-gray-100 rounded-md hover:bg-gray-200" onClick={() => setView("newCase")}>Xem/sửa bệnh án mới</button>
             {user.can_create && <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-md hover:bg-teal-700" onClick={createFollowup}>+ Tạo mã tái khám mới</button>}
+            {user.can_export && <button className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá bệnh án ${currentDisease.toUpperCase()} này (bệnh án mới + mọi lần tái khám)? Giữ lại thông tin bệnh nhân. Không thể hoàn tác.`)) deleteCurrentCase(); }}>Xoá bệnh án này</button>}
             {user.can_export && <button className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá toàn bộ hồ sơ của "${patient.hoTen || patient.maBN}"? Không thể hoàn tác.`)) deletePatientRecord(patient.maBN); }}>Xoá hồ sơ</button>}
           </div>
         </div>
@@ -2278,7 +2334,10 @@ function App() {
     {view === "followup" && patient && aaCase && editIdx !== null && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div className="text-sm text-gray-500 flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
-        <span className="flex items-center"><ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} /></span>
+        <span className="flex items-center">
+          <ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} />
+          {user.can_export && <button className="ml-2 px-2.5 py-1 text-xs bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá lần tái khám ${editIdx + 1}? Không thể hoàn tác.`)) deleteFollowupAt(editIdx); }}>Xoá lần tái khám này</button>}
+        </span>
       </div>
       {currentDisease === "aga"
         ? <AGAFollowUpForm initial={aaCase.taiKhams[editIdx]} patientGioiTinh={patient.gioiTinh} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
