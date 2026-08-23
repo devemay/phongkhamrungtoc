@@ -25,9 +25,8 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // ---------- tiny helpers (no external deps needed) ----------
 function getPath(obj, path, fallback) {
@@ -113,7 +112,7 @@ function mapCaseFromApi(c) {
   };
 }
 function mapPatientFromApi(p) {
-  return { maBN: p.ma_bn, hoTen: p.ho_ten, gioiTinh: p.gioi_tinh, namSinh: p.nam_sinh, danToc: p.dan_toc, diaChi: p.dia_chi, sdt: p.sdt };
+  return { maBN: p.ma_bn, hoTen: p.ho_ten, gioiTinh: p.gioi_tinh, namSinh: p.nam_sinh, ngaySinh: p.ngay_sinh || "", danToc: p.dan_toc, diaChi: p.dia_chi, sdt: p.sdt };
 }
 
 const BAC_SI = ["BS Hà Vinh", "BS Tuỳ", "BS Xuân", "BS Tráng", "BS Trang", "BS Ngọc Anh"];
@@ -136,7 +135,7 @@ const TDKM_NGAY = ["Xuất huyết / bầm tím", "Phản ứng dị ứng (30 p
 const TDKM_SOM = ["Đau sau thủ thuật", "Phù nề tại chỗ"];
 const TDKM_MUON = ["Viêm nang lông", "Teo da tại chỗ", "Giãn mạch", "Giảm sắc tố da", "Rối loạn kinh nguyệt (nữ)"];
 const YEU_TO_KHOI_PHAT = ["Hút thuốc lá", "Stress tâm lý", "Bệnh lý/phẫu thuật", "Nhiễm trùng", "Không xác định", "Khác"];
-const DIEU_TRI_TRUOC = ["Corticoid tại chỗ", "Corticoid toàn thân", "Tiêm nội tổn thương", "Minoxidil", "Ức chế JAK", "Ánh sáng PUVA/NB-UVB", "DPCP/SADBE", "Không điều trị"];
+const DIEU_TRI_TRUOC = ["Corticoid tại chỗ", "Corticoid toàn thân", "Tiêm nội tổn thương", "Minoxidil", "Ức chế JAK", "Ánh sáng PUVA/NB-UVB", "DPCP/SADBE", "Khác", "Không điều trị"];
 const VI_TRI_RUNG_TOC = ["Trán", "Đỉnh", "Thái dương P", "Thái dương T", "Chẩm"];
 const VI_TRI_TON_THUONG = ["Da đầu", "Lông mày", "Lông mi", "Lông nách", "Lông mu", "Toàn thân", "Râu", "Lông tay", "Lông chân"];
 const TON_THUONG_MONG = ["Chấm lõm", "Vệt trắng móng", "Móng thô ráp", "Liềm móng đỏ", "Khía dọc móng", "Khác", "Không"];
@@ -222,7 +221,7 @@ const NEW_CASE_SECTIONS = {
   "Khám thực thể": ["sotStatus", "mach", "ha", "viTriRungToc", "pullTest", "tocToMoc", "viTriTonThuong", "tonThuongMong", "trieuChungCoNang", "theLamSang"],
   "Mức độ nặng (SALT)": ["soLuongMang", "dienTichThucTe", "vung", "mangDai", "mangRong", "mangViTri", "yeuToNangBac"],
   "Dermoscopy": ["dermoscopy"],
-  "Cận lâm sàng": ["labs", "treponema", "viNam", "sieuAmTuyenGiap", "moBenhHoc", "il15", "il13", "ifnG", "ifnGMo", "il13Mo", "ngayLayMau"],
+  "Cận lâm sàng": ["labs", "treponema", "viNam", "sieuAmTuyenGiap", "il15", "il13", "ifnG", "ifnGMo", "il13Mo", "ngayLayMau"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
   "Hình ảnh": ["anh"],
@@ -240,8 +239,8 @@ const NEW_AGA_CASE_SECTIONS = {
   "Bệnh sử - Tiền sử": ["thoiGianKhoiPhat", "benhSuTruoc", "tienSuBanThan", "tienSuGiaDinh"],
   "Khám thực thể": ["canNang", "chieuCao", "vongBung", "mach", "ha", "dauHieuCuongAndrogen", "phanBoRungToc", "matDoToc", "duongKinhSoiToc", "pullTest"],
   "Thang điểm": ["hamiltonNorwood", "sinclairScale", "ludwig", "pcos"],
-  "Dermoscopy": ["dermoscopy"],
-  "Cận lâm sàng": ["labs", "sieuAmOBung", "sieuAmTuyenGiap", "moBenhHoc", "vungTran", "vungDinh", "vungCham", "xnKhac"],
+  "Dermoscopy": ["dermoscopy", "vungTran", "vungDinh", "vungCham"],
+  "Cận lâm sàng": ["labs", "sieuAmOBung", "sieuAmTuyenGiap", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
   "Hình ảnh": ["anh"],
@@ -259,7 +258,7 @@ const NEW_NONSCAR_CASE_SECTIONS = {
   "Bệnh sử - Tiền sử": ["thoiGianKhoiPhat", "benhSuTruoc", "rungTocTruocDay", "tienSuBanThan", "tienSuGiaDinh"],
   "Khám thực thể": ["coNangDaDau", "chieuCao", "canNang", "mach", "ha", "viTriRungToc", "pullTestStatus", "kieuRungToc", "dauHieuViemSeoTeoDa"],
   "Dermoscopy": ["dermoscopy"],
-  "Cận lâm sàng": ["labs", "testNhanhGiangMai", "sieuAmTuyenGiap", "moBenhHoc", "xnKhac"],
+  "Cận lâm sàng": ["labs", "testNhanhGiangMai", "sieuAmTuyenGiap", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
   "Hình ảnh": ["anh"],
@@ -454,12 +453,15 @@ function TreatmentPicker({ chon, khac, onChange }) {
 }
 // Mỗi mục điều trị AGA (thuốc uống / thuốc bôi / thủ thuật): Có/Không → nếu Có thì chọn 1 loại cụ thể,
 // chọn "Khác" thì hiện thêm ô điền chi tiết.
-function AGATreatmentSection({ label, coValue, onCoChange, loaiOptions, loaiValue, onLoaiChange, khacValue, onKhacChange }) {
+function AGATreatmentSection({ label, coValue, onCoChange, loaiOptions, loaiValue, onLoaiChange, khacValue, onKhacChange, cuTheValue, onCuTheChange }) {
   return <div className="mb-4 pb-4 border-b border-gray-100">
     <Field label={label}><RadioGroup options={["Không", "Có"]} value={coValue} onChange={onCoChange} /></Field>
     {coValue === "Có" && <div className="ml-2">
       <Field label="Loại"><RadioGroup options={loaiOptions} value={loaiValue} onChange={onLoaiChange} /></Field>
       {loaiValue === "Khác" && <Field label="Ghi rõ"><TextInput value={khacValue} onChange={onKhacChange} /></Field>}
+      {onCuTheChange && <Field label="Cụ thể (liều dùng, cách dùng, số lần...)">
+        <TextInput value={cuTheValue} onChange={onCuTheChange} placeholder="VD: Finasteride 1mg, uống 1 viên/ngày sau ăn" />
+      </Field>}
     </div>}
   </div>;
 }
@@ -514,7 +516,7 @@ const XET_NGHIEM_OPTIONS = [
   { path: "ifnGMo", label: "IFN-γ mô da đầu" },
   { path: "il13Mo", label: "IL-13 mô da đầu" },
   { path: "sieuAmTuyenGiap", label: "Siêu âm tuyến giáp" },
-  { path: "moBenhHoc", label: "Mô bệnh học" },
+  { path: "moBenhHoc", label: "Mô bệnh học (dữ liệu cũ)" },
   { path: "treponema", label: "Treponema pallidum" },
   { path: "viNam", label: "Vi nấm soi tươi" },
   ...LABS_AGA.map(([k, l]) => ({ path: `labs.${k}`, label: `${l} (AGA)` })),
@@ -533,10 +535,16 @@ function classifyTreatments(text) {
 // Ghép 3 mục điều trị (thuốc uống/thuốc bôi/thủ thuật) thành 1 chuỗi tóm tắt — vẫn cần cho
 // biểu đồ thống kê điều trị ở trang chủ và tương thích với dữ liệu cũ (đều đọc trường "dieuTri").
 function buildTreatmentSummary(d) {
+  const chiTiet = (loai, khac, cuThe) => {
+    let out = loai;
+    if (loai === "Khác" && khac) out += ` (${khac})`;
+    if (cuThe && String(cuThe).trim()) out += ` — ${String(cuThe).trim()}`;
+    return out;
+  };
   const parts = [];
-  if (d.thuocUongCo === "Có" && d.thuocUongLoai) parts.push(`Thuốc uống: ${d.thuocUongLoai}${d.thuocUongLoai === "Khác" && d.thuocUongKhac ? ` (${d.thuocUongKhac})` : ""}`);
-  if (d.thuocBoiCo === "Có" && d.thuocBoiLoai) parts.push(`Thuốc bôi: ${d.thuocBoiLoai}${d.thuocBoiLoai === "Khác" && d.thuocBoiKhac ? ` (${d.thuocBoiKhac})` : ""}`);
-  if (d.thuThuatCo === "Có" && d.thuThuatLoai) parts.push(`Thủ thuật: ${d.thuThuatLoai}${d.thuThuatLoai === "Khác" && d.thuThuatKhac ? ` (${d.thuThuatKhac})` : ""}`);
+  if (d.thuocUongCo === "Có" && d.thuocUongLoai) parts.push(`Thuốc uống: ${chiTiet(d.thuocUongLoai, d.thuocUongKhac, d.thuocUongCuThe)}`);
+  if (d.thuocBoiCo === "Có" && d.thuocBoiLoai) parts.push(`Thuốc bôi: ${chiTiet(d.thuocBoiLoai, d.thuocBoiKhac, d.thuocBoiCuThe)}`);
+  if (d.thuThuatCo === "Có" && d.thuThuatLoai) parts.push(`Thủ thuật: ${chiTiet(d.thuThuatLoai, d.thuThuatKhac, d.thuThuatCuThe)}`);
   return parts.join("; ");
 }
 
@@ -684,7 +692,6 @@ function ImageUploader({ images, onChange, uploadImage }) {
         </div>
       ))}
     </div>
-    <div className="text-xs text-gray-400 mt-1">Tối đa 8 ảnh/lần khám. Hỗ trợ cả HEIC (ảnh iPhone) — tự chuyển sang WebP.</div>
     {lightboxIdx !== null && images.length > 0 &&
       <Lightbox images={images} index={lightboxIdx}
         onClose={() => setLightboxIdx(null)}
@@ -694,27 +701,314 @@ function ImageUploader({ images, onChange, uploadImage }) {
   </div>;
 }
 
-const SECTIONS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh"];
+// ---------- Phiếu khảo sát bệnh nhân tự điền trên hệ thống bệnh viện ----------
+// Nhãn tiếng Việt để hiển thị lại nguyên vẹn phiếu trong tab "Phiếu khảo sát".
+// Thứ tự các mục giữ đúng như phiếu giấy để bác sĩ dễ đối chiếu.
+const SURVEY_VALUE_LABELS = {
+  yes: "Có", no: "Không", unknown: "Không rõ", notsure: "Không rõ",
+  male: "Nam", female: "Nữ", other: "Khác",
+  sudden: "Rụng tóc đột ngột", gradual: "Rụng tóc từ từ",
+  root: "Rụng từ chân tóc", shaft: "Gãy giữa sợi tóc",
+  gt100: "Nhiều hơn 100 sợi", lt100: "Ít hơn 100 sợi",
+  "1/day": "1 lần/ngày", "2/day": "2 lần/ngày",
+  "1/week": "1 lần/tuần", "2/week": "2 lần/tuần", "3/week": "3 lần/tuần", alternate: "Cách ngày",
+};
+const DLQI_VALUE_LABELS = { "0": "Không (0)", "1": "Ít (1)", "2": "Nhiều (2)", "3": "Rất nhiều (3)" };
+const SURVEY_SECTIONS = [
+  ["1. Hành chính", [
+    ["gender", "Giới tính"], ["weightKg", "Cân nặng (kg)"], ["heightCm", "Chiều cao (cm)"],
+  ]],
+  ["2. Bệnh sử - Tiền sử (thời điểm khởi phát rụng tóc)", [
+    ["hairLossOnsetText", "Khởi phát rụng tóc cách (tháng)"],
+    ["onsetSymptom", "Triệu chứng khởi phát"],
+    ["hairLossCharacteristic", "Đặc điểm rụng tóc"],
+    ["hairLossAmount24h", "Lượng tóc rụng trong 24 giờ"],
+    ["loc_topFront", "Vị trí: vùng đỉnh / vùng trước đầu"],
+    ["loc_sides", "Vị trí: hai bên của đầu"],
+    ["loc_occipital", "Vị trí: sau gáy"],
+    ["loc_armpit", "Vị trí: nách"], ["loc_groin", "Vị trí: bẹn"],
+    ["loc_eyebrow", "Vị trí: lông mày"], ["loc_eyelash", "Vị trí: lông mi"], ["loc_beard", "Vị trí: vùng râu"],
+    ["cause", "Theo bệnh nhân, nguyên nhân rụng tóc là"],
+  ]],
+  ["3. Thói quen chăm sóc tóc", [
+    ["washPerWeek", "Số lần gội đầu 1 tuần"], ["shampoo", "Dầu gội"], ["conditioner", "Dầu xả"],
+    ["hairCareOther", "Sản phẩm chăm sóc tóc khác"],
+    ["habit_tightHairstyle", "Buộc tóc đuôi ngựa / tết / xoăn / nối tóc / tóc giả"],
+    ["habit_heat", "Dùng nhiệt trực tiếp lên tóc (sấy, ép-uốn nóng)"],
+    ["habit_chemicals", "Dùng hoá chất cho tóc (nhuộm, duỗi, ép)"],
+  ]],
+  ["4. Triệu chứng", [
+    ["scalp_itch", "Ngứa"], ["scalp_itch_scale", "Mức độ ngứa"],
+    ["scalp_crawling", "Cảm giác kiến bò"], ["scalp_scaling", "Bong vảy"], ["scalp_redness", "Đỏ da"],
+    ["scalp_pain", "Đau hoặc căng tức"], ["scalp_pain_scale", "Mức độ đau"],
+    ["scalp_sensitive", "Nhạy cảm hoặc kích ứng"], ["scalp_oily", "Da đầu nhờn"],
+    ["scalp_papuleUlcer", "Nốt sẩn hoặc loét"],
+    ["erythema_face_scalp", "Ban đỏ ở da đầu hoặc mặt"], ["erythema_desc", "Mô tả ban đỏ"],
+    ["nail_pitting", "Móng: rỗ móng"], ["nail_longitudinal", "Móng: đường vân dọc hoặc lõm"],
+    ["nail_whiteSpots", "Móng: chấm trắng"], ["nail_ridges", "Móng: gờ móng"],
+  ]],
+  ["5.1 Tiền sử bệnh lý bản thân", [
+    ["mh_psoriasis", "Vảy nến"], ["mh_dandruff", "Gàu"], ["mh_severeHeadache", "Đau đầu nghiêm trọng"],
+    ["mh_anemia", "Thiếu máu"], ["mh_cysticAcne", "Trứng cá mụn nang"],
+    ["mh_depression", "Trầm cảm"], ["mh_anxiety", "Lo âu"],
+    ["mh_nippleDischarge", "Chảy dịch tiết từ vú"], ["mh_deeperVoice", "Giọng nói trầm hơn"],
+    ["mh_facialHair", "Lông mặt mọc nhiều"], ["mh_bodyHair", "Lông cơ thể mọc nhiều"],
+    ["mh_pcos", "Buồng trứng đa nang"], ["mh_clitoromegaly", "Phì đại âm vật"],
+  ]],
+  ["5.2 Trong 6 tháng TRƯỚC khi bắt đầu rụng tóc", [
+    ["pre_highFever", "Sốt cao"], ["pre_prolongedHighFever", "Sốt cao kéo dài"],
+    ["pre_weightChange", "Tăng/giảm cân > 4,5 kg"], ["pre_severeStress", "Căng thẳng tâm lý nghiêm trọng"],
+    ["pre_startStopOCP", "Bắt đầu/ngừng thuốc tránh thai"],
+    ["pre_startStopHormoneTherapy", "Bắt đầu/ngừng liệu pháp hormone"],
+    ["pre_startStopBetaBlocker", "Bắt đầu/ngừng thuốc chẹn beta"],
+    ["pre_diabetesOrInsulinResistance", "Đái tháo đường, kháng insulin"],
+    ["pre_endStageChronicKidneyDisease", "Bệnh thận mạn giai đoạn cuối"],
+    ["pre_chronicLiverDisease", "Bệnh gan mạn tính"],
+    ["pre_acuteSystemicIllness", "Bệnh lý hệ thống cấp tính"],
+    ["pre_lowProteinDiet", "Chế độ ăn ít đạm"], ["pre_ironDeficiency", "Thiếu sắt trong máu"],
+    ["pre_severeInfection", "Nhiễm trùng nặng"], ["pre_chronicFlare", "Đợt bùng phát bệnh mạn tính"],
+    ["pre_majorSurgery", "Phẫu thuật lớn / gây mê toàn thân"], ["pre_thyroidDisease", "Bệnh tuyến giáp"],
+    ["pre_systemicLupusErythematosus", "Lupus ban đỏ hệ thống"], ["pre_syphilis", "Bệnh giang mai"],
+    ["pre_polycysticOvarySyndrome", "Buồng trứng đa nang"], ["pre_childbirth", "Sinh con"],
+  ]],
+  ["5.3 - 5.13 Thuốc và chế độ ăn hiện tại", [
+    ["drugAllergy", "Dị ứng thuốc"], ["drugAllergy_list", "Thuốc dị ứng"],
+    ["currentMeds", "Đang dùng thuốc gây rụng tóc (Lithium, Valproate, Retinoids, Warfarin, chẹn beta...)"],
+    ["currentMeds_list", "Tên thuốc đang dùng"],
+    ["topicalHerbalSupp", "Dầu thoa / thảo dược / thực phẩm bổ sung"], ["topicalHerbalSupp_list", "Chi tiết"],
+    ["otherHormoneTherapyHistory", "Điều trị hormone khác"], ["otherHormoneTherapyHistory_list", "Chi tiết"],
+    ["weightLossDiet", "Chế độ ăn hoặc thuốc giảm cân"], ["weightLossDiet_list", "Chi tiết"],
+    ["currentlyLowProtein", "Đang theo chế độ ăn ít đạm"],
+    ["vegetarianOrSpecialDiet", "Ăn chay/thuần chay hoặc chế độ ăn đặc biệt"],
+    ["otherDiet", "Chế độ ăn kiêng khác (không gluten...)"],
+  ]],
+  ["5.14 - 5.16 Tiền sử gia đình", [
+    ["fam_maleHairLoss", "Nam giới trong gia đình bị rụng tóc"],
+    ["fam_male_relation", "Quan hệ (nam)"], ["fam_male_baldComplete", "Hói hoàn toàn (nam)"],
+    ["fam_male_similarPattern", "Cùng kiểu rụng tóc (nam)"],
+    ["fam_femaleHairLoss", "Nữ giới trong gia đình bị rụng tóc"],
+    ["fam_female_relation", "Quan hệ (nữ)"], ["fam_female_similarPattern", "Cùng kiểu rụng tóc (nữ)"],
+    ["fam_thyroid_anemia_pcos_lupus", "Gia đình mắc tuyến giáp / thiếu máu / PCOS / lupus"],
+    ["fam_breast_ovarian_cancer", "Gia đình mắc ung thư vú / buồng trứng"],
+    ["fam_breast_ovarian_relation", "Quan hệ"],
+  ]],
+  ["Kinh nguyệt - Nội tiết (nữ)", [
+    ["period_has", "Còn kinh nguyệt"], ["period_regular", "Kinh nguyệt đều"],
+    ["period_days_between", "Số ngày giữa 2 chu kỳ"], ["period_duration_days", "Số ngày hành kinh"],
+    ["period_bleeding_amount", "Lượng máu kinh"], ["period_irregular_desc", "Mô tả bất thường"],
+    ["menopause", "Mãn kinh"], ["menopause_age", "Tuổi mãn kinh"],
+    ["contraceptionHistory", "Tiền sử dùng thuốc tránh thai"], ["contraceptionHistory_list", "Chi tiết"],
+    ["ocpChangeRecent", "Gần đây đổi/ngừng thuốc tránh thai"], ["ocpChangeRecent_list", "Chi tiết"],
+  ]],
+  ["6. Lịch sử điều trị", [
+    ["seenOtherDoctor", "Đã khám bác sĩ khác về rụng tóc"],
+    ["topicalMinoxidil", "Minoxidil bôi/xịt ngoài da"],
+    ["topicalMinoxidil_concentration", "— Nồng độ (%)"], ["topicalMinoxidil_freq", "— Tần suất"],
+    ["topicalMinoxidil_freq_other", "— Tần suất (khác)"], ["topicalMinoxidil_regular", "— Dùng đều đặn"],
+    ["topicalMinoxidil_duration", "— Thời gian dùng"], ["topicalMinoxidil_effective", "— Hiệu quả"],
+    ["topicalMinoxidil_initialShedding", "— Rụng tăng lúc đầu"],
+    ["topicalMinoxidil_sideEffects", "— Tác dụng phụ"], ["topicalMinoxidil_sideEffects_list", "— Chi tiết TDP"],
+    ["oralMinoxidil", "Minoxidil dạng uống"],
+    ["oralMinoxidil_dose", "— Liều"], ["oralMinoxidil_freq", "— Tần suất"],
+    ["oralMinoxidil_freq_other", "— Tần suất (khác)"], ["oralMinoxidil_regular", "— Dùng đều đặn"],
+    ["oralMinoxidil_duration", "— Thời gian dùng"], ["oralMinoxidil_effective", "— Hiệu quả"],
+    ["oralMinoxidil_initialShedding", "— Rụng tăng lúc đầu"],
+    ["oralMinoxidil_sideEffects", "— Tác dụng phụ"], ["oralMinoxidil_sideEffects_list", "— Chi tiết TDP"],
+    ["other_biotin", "Biotin"], ["other_biotin_dose", "— Liều"],
+    ["other_spiro", "Spironolactone/Aldactone"], ["other_spiro_dose", "— Liều"],
+    ["other_shampooSet_name", "Bộ dầu gội/dầu xả dành cho rụng tóc"],
+    ["other_dutasteride", "Finasteride hoặc Dutasteride"], ["other_dutasteride_dose", "— Liều"],
+    ["other_ledcap", "Mũ LED / liệu pháp ánh sáng"],
+    ["other_ketoconazole", "Dầu gội Ketoconazole/Nizoral"],
+    ["other_antibiotics", "Kháng sinh (doxycycline, clindamycin, benzoyl peroxide)"],
+    ["other_antibiotics_dose", "— Liều"],
+    ["other_scalpInjection", "Đã từng tiêm da đầu"],
+    ["other_injection_prp", "— PRP"], ["other_injection_prf", "— PRF"],
+    ["other_injection_steroid", "— Corticoid nội tổn thương"],
+    ["other_injection_other", "— Khác"], ["other_injection_other_text", "— Khác (ghi rõ)"],
+    ["other_injection_visitsEstimate", "— Số lần ước tính"],
+    ["other_iron", "Bổ sung sắt trong 1 tháng gần đây"], ["other_iron_dose", "— Liều"],
+    ["other_vitamins", "Bổ sung kẽm, vitamin D, B12 trong 1 tháng gần đây"], ["other_vitamins_list", "— Chi tiết"],
+    ["allTreatmentsTried", "Đã thử phương pháp điều trị/kích thích mọc tóc khác"],
+    ["allTreatmentsTried_list", "— Liệt kê"],
+    ["sidefx", "Gặp tác dụng phụ từ điều trị"],
+    ["sidefx_dizziness", "— Chóng mặt"], ["sidefx_unwantedHair", "— Mọc lông ngoài ý muốn"],
+    ["sidefx_breastEnlarge", "— To tuyến vú"], ["sidefx_scalpIrritation", "— Kích ứng da đầu"],
+    ["sidefx_other", "— Khác"], ["sidefx_other_text", "— Khác (ghi rõ)"],
+    ["moreEffectiveMethod", "Có phương pháp hiệu quả hơn"], ["moreEffectiveMethod_list", "— Liệt kê"],
+    ["testsDone", "Đã làm xét nghiệm trước đó"], ["biopsyDone", "Đã sinh thiết da đầu trước đó"],
+    ["youngHairPhotoNote", "Ghi chú ảnh tóc thời trẻ"],
+  ]],
+  ["7. Kì vọng điều trị", [["treatmentGoal", "Mục tiêu điều trị mong muốn"]]],
+  ["8. Bộ câu hỏi DLQI", [
+    ["dlqi_scalpItchingPainOrStinging", "8.1 Da đầu/tóc ngứa, đau rát hay châm chích"],
+    ["dlqi_embarrassmentOrSelfConsciousness", "8.2 Xấu hổ hay tự ti vì tình trạng tóc"],
+    ["dlqi_impactOnShoppingAndDailyActivities", "8.3 Cản trở đi chợ, mua sắm, việc nhà"],
+    ["dlqi_impactOnClothingOrHeadwearChoice", "8.4 Ảnh hưởng lựa chọn quần áo, phụ kiện đội đầu"],
+    ["dlqi_impactOnSocialOrLeisureActivities", "8.5 Ảnh hưởng hoạt động xã hội, giải trí"],
+    ["dlqi_impactOnSportsOrPhysicalActivities", "8.6 Khó khăn khi chơi thể thao, vận động"],
+    ["dlqi_impactOnWorkOrStudy", "8.7 Ảnh hưởng học tập hoặc công việc"],
+    ["dlqi_impactOnPersonalRelationships", "8.8 Rắc rối với bạn đời, bạn bè, người thân"],
+    ["dlqi_impactOnSexualLife", "8.9 Khó khăn cho đời sống tình dục"],
+    ["dlqi_treatmentInconvenience", "8.10 Việc điều trị gây phiền toái/tốn thời gian"],
+  ]],
+];
+
+function surveyValueText(key, value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (value === true) return "Có";
+  if (value === false) return null; // ô tích không chọn — coi như không có thông tin
+  const s = String(value);
+  if (key.indexOf("dlqi_") === 0 && DLQI_VALUE_LABELS[s]) return DLQI_VALUE_LABELS[s];
+  return SURVEY_VALUE_LABELS[s] || s;
+}
+
+// Tab hiển thị nguyên vẹn phiếu khảo sát bệnh nhân tự điền (chỉ đọc).
+function SurveyTab({ d }) {
+  const a = d.khaoSat;
+  if (!a) return <div className="text-sm text-gray-500">
+    Chưa đồng bộ phiếu khảo sát. Bấm nút <b>“Đồng bộ thông tin từ phiếu khảo sát”</b> ở đầu trang.
+  </div>;
+  return <div>
+    <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
+      <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 text-xs">Bệnh nhân tự điền</span>
+      {d.khaoSatNgay && <span className="text-gray-500">Ngày khảo sát: {d.khaoSatNgay}</span>}
+      {d.khaoSatDlqiTong !== null && d.khaoSatDlqiTong !== undefined &&
+        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">Tổng điểm DLQI: {d.khaoSatDlqiTong}/30</span>}
+    </div>
+    {SURVEY_SECTIONS.map(([title, fields]) => {
+      const rows = fields.map(([k, l]) => [l, surveyValueText(k, a[k])]).filter((r) => r[1] !== null);
+      if (rows.length === 0) return null;
+      return <div key={title} className="mb-4">
+        <div className="text-sm font-medium text-gray-700 mb-1">{title}</div>
+        <div className="border border-gray-200 rounded-md overflow-hidden">
+          {rows.map(([label, val], i) => (
+            <div key={label} className={`flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 px-3 py-1.5 text-sm ${i % 2 ? "bg-gray-50" : "bg-white"}`}>
+              <div className="sm:w-96 text-gray-600">{label}</div>
+              <div className="flex-1 text-gray-900 whitespace-pre-wrap">{val}</div>
+            </div>
+          ))}
+        </div>
+      </div>;
+    })}
+  </div>;
+}
+
+// Thanh "Đồng bộ thông tin từ phiếu khảo sát" — dùng chung cho cả 3 bệnh.
+function SurveySyncBar({ benh, data, fetchSurvey, onApply }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  async function run() {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await fetchSurvey(benh);
+      if (!r.found) { setMsg({ ok: false, text: r.loi || "Hệ thống bệnh viện không có hồ sơ với mã bệnh nhân này." }); return; }
+      if (!r.co_khao_sat) { setMsg({ ok: false, text: "Bệnh nhân có hồ sơ trên hệ thống bệnh viện nhưng CHƯA điền phiếu khảo sát." }); return; }
+      const soTruong = Object.keys(r.mapped || {}).length;
+      const daCoDuLieu = Object.keys(data || {}).some((k) => k !== "khaoSat" && k !== "khaoSatNgay" && k !== "khaoSatDlqiTong" && isFilled(data[k]));
+      if (daCoDuLieu && !window.confirm(`Bệnh án này đã có dữ liệu.\n\nĐồng bộ sẽ GHI ĐÈ ${soTruong} trường bằng nội dung bệnh nhân tự khai trong phiếu khảo sát. Các trường khác giữ nguyên.\n\nTiếp tục?`)) return;
+      onApply(r);
+      setMsg({ ok: true, text: `Đã điền ${soTruong} trường từ phiếu khảo sát${r.ngay_kham ? ` ngày ${r.ngay_kham}` : ""}. Toàn bộ câu trả lời được lưu ở tab “Phiếu khảo sát”.` });
+    } catch (e) {
+      setMsg({ ok: false, text: e.message });
+    } finally { setBusy(false); }
+  }
+  return <div className="mb-3 flex flex-wrap items-center gap-2">
+    <button onClick={run} disabled={busy}
+      className={`px-3 py-1.5 text-sm rounded-md ${busy ? "bg-gray-100 text-gray-400" : "bg-teal-50 text-teal-700 hover:bg-teal-100"}`}>
+      {busy ? "Đang lấy phiếu khảo sát..." : "⟳ Đồng bộ thông tin từ phiếu khảo sát"}
+    </button>
+    {msg && <span className={`text-xs px-2.5 py-1 rounded-md ${msg.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{msg.text}</span>}
+  </div>;
+}
+
+// Áp bảng ánh xạ (dạng phẳng "đường.dẫn": giá trị) từ phiếu khảo sát vào dữ liệu bệnh án.
+function applySurveyToData(prev, r) {
+  let next = { ...(prev || {}), khaoSat: r.khao_sat, khaoSatNgay: r.ngay_kham || null, khaoSatDlqiTong: r.dlqi_tong };
+  Object.keys(r.mapped || {}).forEach((path) => { next = setPath(next, path, r.mapped[path]); });
+  return next;
+}
+
+// Tab "Phiếu khảo sát" cố ý KHÔNG nằm trong bảng kiểm tra "đã điền" (NEW_*_SECTIONS) —
+// bệnh án vẫn phải hoàn thiện được kể cả khi bệnh nhân không điền phiếu.
+const EXTRA_TAB_KEYS = { "Phiếu khảo sát": ["khaoSat"] };
+function tabKeys(sectionMap, name) { return sectionMap[name] || EXTRA_TAB_KEYS[name] || []; }
+
+// ---------- Nút tròn "điền nhanh": điền 1 đáp án cho mọi câu Có/Không CÒN TRỐNG của mục đang mở ----------
+// Không bao giờ ghi đè câu bác sĩ đã trả lời — chỉ đụng vào ô còn trống.
+const YESNO3 = ["Có", "Không", "Không biết"];
+const YESNO2 = ["Có", "Không"];
+// bảng Tiền sử (YesNoUnknownTable): mỗi dòng là <gốc>.<tên dòng>.status
+function tsTargets(rows, root, options = YESNO3) { return rows.map((r) => ({ path: `${root}.${r}.status`, options })); }
+// Dermoscopy: mỗi dấu hiệu là dermoscopy.<tên dấu hiệu>
+function dermTargets(items) { return items.map((i) => ({ path: `dermoscopy.${i}`, options: YESNO2 })); }
+
+function applyQuickFill(data, targets, val) {
+  let next = data, n = 0;
+  (targets || []).forEach((t) => {
+    if (!t.options.includes(val)) return;
+    if (isFilled(getPath(next, t.path))) return;
+    next = setPath(next, t.path, val); n++;
+  });
+  return { next, n };
+}
+
+function QuickFillButton({ targets, onApply }) {
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState("");
+  if (!targets || targets.length === 0) return null;
+  const options = [];
+  targets.forEach((t) => t.options.forEach((o) => { if (options.indexOf(o) < 0) options.push(o); }));
+  const run = (v) => {
+    const n = onApply(v);
+    setOpen(false);
+    setMsg(n > 0 ? `Đã điền “${v}” cho ${n} câu còn trống` : "Mục này không còn câu nào trống");
+    setTimeout(() => setMsg(""), 4000);
+  };
+  return <div className="ml-auto relative flex items-center gap-2">
+    {msg && <span className="text-xs text-emerald-700 bg-emerald-50 rounded-md px-2 py-1 whitespace-nowrap">{msg}</span>}
+    <button type="button" onClick={() => setOpen(!open)}
+      title="Điền nhanh các câu Có/Không còn trống trong mục đang mở"
+      className="w-9 h-9 rounded-full border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 text-base leading-none flex items-center justify-center">⚡</button>
+    {open && <div className="absolute right-0 top-11 z-20 w-60 bg-white border border-gray-200 rounded-md shadow-lg py-1">
+      <div className="px-3 py-1 text-[11px] text-gray-400">Điền cho {targets.length} câu của mục này (chỉ câu còn trống)</div>
+      {options.map((v) => (
+        <button key={v} type="button" onClick={() => run(v)} className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50">{v}</button>
+      ))}
+      <button type="button" onClick={() => setOpen(false)} className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-50 border-t border-gray-100">Đóng</button>
+    </div>}
+  </div>;
+}
+
+const SECTIONS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
 const SECTIONS_FU = ["Lâm sàng", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng & điều trị", "Giải phẫu bệnh", "Hình ảnh"];
 
-function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
+function NewCaseForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fetchSurvey }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 1 ? [...tsTargets(TIENSU_BANTHAN, "tienSuBanThan"), ...tsTargets(TIENSU_GIADINH, "tienSuGiaDinh")]
+    : tab === 4 ? dermTargets(DERMOSCOPY_AA) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
   const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
   const saltTotal = calcSalt(d.vung || {});
+  const applySurvey = (r) => setD((prev) => applySurveyToData(prev, r));
 
   return <div>
+    {fetchSurvey && <SurveySyncBar benh="aa" data={d} fetchSurvey={fetchSurvey} onApply={applySurvey} />}
     <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
       {SECTIONS_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, NEW_CASE_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
     </div>
 
     {tab === 0 && <div className="grid sm:grid-cols-2 gap-x-6">
@@ -740,7 +1034,11 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
       <Field label="Yếu tố khởi phát"><CheckboxGroup options={YEU_TO_KHOI_PHAT} value={d.yeuToKhoiPhat} onChange={(v) => set("yeuToKhoiPhat", v)} /></Field>
       <Field label="Điều trị trước đó">
         <RadioGroup options={["Có", "Không", "Không biết"]} value={d.dieuTriTruocDoStatus} onChange={(v) => set("dieuTriTruocDoStatus", v)} />
-        {d.dieuTriTruocDoStatus === "Có" && <div className="mt-1"><CheckboxGroup options={DIEU_TRI_TRUOC} value={d.dieuTriTruocChiTiet} onChange={(v) => set("dieuTriTruocChiTiet", v)} /></div>}
+        {d.dieuTriTruocDoStatus === "Có" && <div className="mt-1">
+          <CheckboxGroup options={DIEU_TRI_TRUOC} value={d.dieuTriTruocChiTiet} onChange={(v) => set("dieuTriTruocChiTiet", v)} />
+          {(d.dieuTriTruocChiTiet || []).includes("Khác") &&
+            <div className="mt-1"><TextInput value={d.dieuTriTruocKhac} onChange={(v) => set("dieuTriTruocKhac", v)} placeholder="Ghi rõ phương pháp điều trị khác" /></div>}
+        </div>}
       </Field>
       <Field label="Thuốc đang sử dụng"><TextInput value={d.thuocDangDung} onChange={(v) => set("thuocDangDung", v)} /></Field>
       <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử bản thân</div>
@@ -805,7 +1103,6 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
         <Field label="Ab miễn dịch tự động (Treponema pallidum)"><TextInput value={d.treponema} onChange={(v) => set("treponema", v)} /></Field>
         <Field label="Vi nấm soi tươi"><TextInput value={d.viNam} onChange={(v) => set("viNam", v)} /></Field>
         <Field label="Siêu âm tuyến giáp"><TextInput value={d.sieuAmTuyenGiap} onChange={(v) => set("sieuAmTuyenGiap", v)} /></Field>
-        <Field label="Mô bệnh học"><TextInput value={d.moBenhHoc} onChange={(v) => set("moBenhHoc", v)} /></Field>
       </div>
       <div className="mt-4">
         <div className="text-sm font-medium text-gray-700 mb-1">Sinh học phân tử (IL-15/IL-13/IFN-γ)</div>
@@ -832,13 +1129,16 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
     {tab === 7 && <div>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_AA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
       {d.thuThuatCo === "Có" && <div className="mt-2 border-t border-gray-200 pt-3">
         <div className="text-sm font-medium text-gray-700 mb-1">Theo dõi sau thủ thuật</div>
         <Field label="Điểm đau VAS trong thủ thuật (0-10)"><TextInput type="number" value={d.vas} onChange={(v) => set("vas", v)} /></Field>
@@ -859,6 +1159,8 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
 
     {tab === 8 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
 
+    {tab === 9 && <SurveyTab d={d} />}
+
     {tab < SECTIONS_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_NEW[tab + 1]} →</button>
     </div>}
@@ -871,12 +1173,16 @@ function NewCaseForm({ initial, onSave, onCancel, uploadImage }) {
   </div>;
 }
 
-function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
+function FollowUpForm({ initial, onDraftChange, saltT0, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 2 ? dermTargets(DERMOSCOPY_AA) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
   const setDieuTri = (chon, khac) => { set("dieuTriChon", chon); set("dieuTriKhac", khac); set("dieuTri", buildDieuTriString(chon, khac)); };
   const saltNow = calcSalt(d.vung || {});
   const pctRegrowth = saltT0 > 0 ? fmt((saltT0 - saltNow) / saltT0 * 100) : null;
@@ -891,6 +1197,7 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
           {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
     </div>
 
     {tab === 0 && <div>
@@ -959,13 +1266,16 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
       </Field>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_AA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
     </div>}
 
     {tab === 4 && <div>
@@ -991,25 +1301,33 @@ function FollowUpForm({ initial, saltT0, onSave, onCancel, uploadImage }) {
   </div>;
 }
 
-const SECTIONS_AGA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Thang điểm", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh"];
+const SECTIONS_AGA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Thang điểm", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
 const SECTIONS_AGA_FU = ["Lâm sàng", "Thang điểm", "Tác dụng phụ & Xét nghiệm", "Giải phẫu bệnh", "Điều trị", "Hình ảnh"];
 
-function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage }) {
+function NewAGAForm({ initial, onDraftChange, patientGioiTinh, onSave, onCancel, uploadImage, fetchSurvey }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 1 ? [...tsTargets(TIENSU_BANTHAN_AGA, "tienSuBanThan"), { path: "tienSuGiaDinh.status", options: YESNO3 }]
+    : tab === 4 ? dermTargets(DERMOSCOPY_AGA) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
+  const applySurvey = (r) => setD((prev) => applySurveyToData(prev, r));
 
   return <div>
+    {fetchSurvey && <SurveySyncBar benh="aga" data={d} fetchSurvey={fetchSurvey} onApply={applySurvey} />}
     <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
       {SECTIONS_AGA_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, NEW_AGA_CASE_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_AGA_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
     </div>
 
     {tab === 0 && <div className="grid sm:grid-cols-2 gap-x-6">
@@ -1077,18 +1395,6 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
           <span>{item}</span><RadioGroup options={["Có", "Không"]} value={getPath(d, `dermoscopy.${item}`)} onChange={(v) => set(`dermoscopy.${item}`, v)} />
         </div>
       ))}
-    </div>}
-
-    {tab === 5 && <div>
-      <div className="grid sm:grid-cols-3 gap-x-4">
-        {LABS_AGA.map(([k, l, u]) => <Field key={k} label={`${l}${u ? ` (${u})` : ""}`}><TextInput value={getPath(d, `labs.${k}`)} onChange={(v) => set(`labs.${k}`, v)} /></Field>)}
-      </div>
-      <div className="grid sm:grid-cols-2 gap-x-6 mt-2">
-        <Field label="Siêu âm ổ bụng (buồng trứng)"><TextInput value={d.sieuAmOBung} onChange={(v) => set("sieuAmOBung", v)} /></Field>
-        <Field label="Siêu âm tuyến giáp"><TextInput value={d.sieuAmTuyenGiap} onChange={(v) => set("sieuAmTuyenGiap", v)} /></Field>
-        <Field label="Mô bệnh học"><TextInput value={d.moBenhHoc} onChange={(v) => set("moBenhHoc", v)} /></Field>
-        <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
-      </div>
       {["vungTran", "vungDinh", "vungCham"].map((key, i) => (
         <div key={key} className="mt-4 border border-gray-200 rounded-md p-3">
           <div className="text-sm font-medium text-gray-700 mb-2">{["Vùng trán", "Vùng đỉnh", "Vùng chẩm"][i]}</div>
@@ -1104,6 +1410,17 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
       ))}
     </div>}
 
+    {tab === 5 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        {LABS_AGA.map(([k, l, u]) => <Field key={k} label={`${l}${u ? ` (${u})` : ""}`}><TextInput value={getPath(d, `labs.${k}`)} onChange={(v) => set(`labs.${k}`, v)} /></Field>)}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 mt-2">
+        <Field label="Siêu âm ổ bụng (buồng trứng)"><TextInput value={d.sieuAmOBung} onChange={(v) => set("sieuAmOBung", v)} /></Field>
+        <Field label="Siêu âm tuyến giáp"><TextInput value={d.sieuAmTuyenGiap} onChange={(v) => set("sieuAmTuyenGiap", v)} /></Field>
+        <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
+      </div>
+    </div>}
+
     {tab === 6 && <div>
       <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
       {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
@@ -1116,13 +1433,16 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
     {tab === 7 && <div>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_AGA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
       {d.thuThuatCo === "Có" && <div className="mt-2 border-t border-gray-200 pt-3">
         <div className="text-sm font-medium text-gray-700 mb-1">Theo dõi sau thủ thuật</div>
         <Field label="Điểm đau VAS trong thủ thuật (0-10)"><TextInput type="number" value={d.vas} onChange={(v) => set("vas", v)} /></Field>
@@ -1143,6 +1463,8 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
 
     {tab === 8 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
 
+    {tab === 9 && <SurveyTab d={d} />}
+
     {tab < SECTIONS_AGA_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_AGA_NEW[tab + 1]} →</button>
     </div>}
@@ -1155,12 +1477,14 @@ function NewAGAForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage })
   </div>;
 }
 
-function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadImage }) {
+function AGAFollowUpForm({ initial, onDraftChange, patientGioiTinh, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
   const showSinclair = patientGioiTinh === "Nữ";
 
   return <div>
@@ -1217,13 +1541,16 @@ function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadIma
     {tab === 4 && <div>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_AGA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
       {d.thuThuatCo === "Có" && <div className="mt-2 border-t border-gray-200 pt-3">
         <div className="text-sm font-medium text-gray-700 mb-1">Theo dõi sau thủ thuật</div>
         <Field label="Điểm đau VAS trong thủ thuật (0-10)"><TextInput type="number" value={d.vas} onChange={(v) => set("vas", v)} /></Field>
@@ -1255,25 +1582,33 @@ function AGAFollowUpForm({ initial, patientGioiTinh, onSave, onCancel, uploadIma
   </div>;
 }
 
-const SECTIONS_NS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh"];
+const SECTIONS_NS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
 const SECTIONS_NS_FU = ["Lâm sàng", "Giải phẫu bệnh", "Xét nghiệm & Điều trị", "Hình ảnh"];
 
-function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
+function NewNonScarForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fetchSurvey }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 1 ? [...tsTargets(TIENSU_BANTHAN_NONSCAR, "tienSuBanThan"), { path: "tienSuGiaDinh.status", options: YESNO2 }]
+    : tab === 3 ? dermTargets(DERMOSCOPY_NONSCAR) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
   const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
+  const applySurvey = (r) => setD((prev) => applySurveyToData(prev, r));
 
   return <div>
+    {fetchSurvey && <SurveySyncBar benh="nonscar" data={d} fetchSurvey={fetchSurvey} onApply={applySurvey} />}
     <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
       {SECTIONS_NS_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, NEW_NONSCAR_CASE_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_NONSCAR_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
     </div>
 
     {tab === 0 && <div className="grid sm:grid-cols-2 gap-x-6">
@@ -1388,7 +1723,6 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
       <div className="grid sm:grid-cols-2 gap-x-6 mt-2">
         <Field label="Test nhanh giang mai"><TextInput value={d.testNhanhGiangMai} onChange={(v) => set("testNhanhGiangMai", v)} /></Field>
         <Field label="Siêu âm tuyến giáp"><TextInput value={d.sieuAmTuyenGiap} onChange={(v) => set("sieuAmTuyenGiap", v)} /></Field>
-        <Field label="Mô bệnh học"><TextInput value={d.moBenhHoc} onChange={(v) => set("moBenhHoc", v)} /></Field>
         <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
       </div>
     </div>}
@@ -1405,17 +1739,22 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
     {tab === 6 && <div>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_NS} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
       <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
     </div>}
 
     {tab === 7 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+
+    {tab === 8 && <SurveyTab d={d} />}
 
     {tab < SECTIONS_NS_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_NS_NEW[tab + 1]} →</button>
@@ -1429,12 +1768,14 @@ function NewNonScarForm({ initial, onSave, onCancel, uploadImage }) {
   </div>;
 }
 
-function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
+function NonScarFollowUpForm({ initial, onDraftChange, onSave, onCancel, uploadImage }) {
   const [d, setD] = useState(initial || {});
   const [tab, setTab] = useState(0);
   const set = (path, val) => setD((prev) => setPath(prev, path, val));
   const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
   useCtrlSSave(doSave);
+  // báo bản nháp hiện tại lên App: bấm vào mã bệnh nhân sẽ lưu nốt rồi mới chuyển màn
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
 
   return <div>
     <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
@@ -1474,13 +1815,16 @@ function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
       </Field>
       <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
         loaiOptions={THUOC_UONG_NS} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
-        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)} />
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
       <AGATreatmentSection label="Thuốc xịt/bôi" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
         loaiOptions={THUOC_BOI_AGA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
-        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)} />
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
       <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
         loaiOptions={THU_THUAT_AGA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
-        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)} />
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
     </div>}
 
     {tab === 3 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
@@ -1494,6 +1838,21 @@ function NonScarFollowUpForm({ initial, onSave, onCancel, uploadImage }) {
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
     </div>
+  </div>;
+}
+
+// Các ô thông tin hành chính — dùng chung cho màn tạo bệnh nhân mới và màn sửa thông tin,
+// để 2 chỗ không bao giờ lệch nhau khi thêm/bớt trường.
+function PatientFields({ patient, onChange }) {
+  const set = (patch) => onChange({ ...patient, ...patch });
+  return <div className="grid sm:grid-cols-2 gap-x-6">
+    <Field label="Họ và tên"><TextInput value={patient.hoTen} onChange={(v) => set({ hoTen: v })} /></Field>
+    <Field label="Giới"><RadioGroup options={["Nam", "Nữ"]} value={patient.gioiTinh} onChange={(v) => set({ gioiTinh: v })} /></Field>
+    <Field label="Ngày sinh"><TextInput type="date" value={patient.ngaySinh} onChange={(v) => set({ ngaySinh: v, namSinh: v ? Number(v.slice(0, 4)) : patient.namSinh })} /></Field>
+    <Field label="Năm sinh"><TextInput type="number" value={patient.namSinh} onChange={(v) => set({ namSinh: v })} /></Field>
+    <Field label="Dân tộc"><TextInput value={patient.danToc} onChange={(v) => set({ danToc: v })} /></Field>
+    <Field label="Số điện thoại"><TextInput value={patient.sdt} onChange={(v) => set({ sdt: v })} /></Field>
+    <Field label="Địa chỉ"><TextInput value={patient.diaChi} onChange={(v) => set({ diaChi: v })} /></Field>
   </div>;
 }
 
@@ -1806,6 +2165,10 @@ function App() {
   const [searchResults, setSearchResults] = useState(null);
   const [todayFilter, setTodayFilter] = useState("");
   const [chartStats, setChartStats] = useState({ visitType: [], disease: [] });
+  const [hisMsg, setHisMsg] = useState(null); // trạng thái tra cứu hệ thống bệnh viện
+  const [patientDraft, setPatientDraft] = useState(null); // bản nháp khi sửa thông tin hành chính
+  // Giữ bản nháp của phiếu đang mở (không dùng state để khỏi vẽ lại toàn app mỗi lần gõ)
+  const draftRef = useRef(null);
 
   useEffect(() => { if (user) { loadToday(); loadGpbWaitlist(); } }, [user]);
 
@@ -1816,6 +2179,8 @@ function App() {
     ssSet("aa_user", JSON.stringify(u)); setUser(u);
   }
   function logout() { ssRemove("aa_user"); setUser(null); setView("home"); }
+  // Không còn ở trong phiếu nào thì xoá bản nháp, tránh lưu nhầm sang hồ sơ khác
+  useEffect(() => { if (view !== "newCase" && view !== "followup") draftRef.current = null; }, [view]);
   async function changePassword(oldPw, newPw) {
     await api("/auth/change-password", { method: "POST", body: JSON.stringify({ old_password: oldPw, new_password: newPw }) });
   }
@@ -1833,6 +2198,29 @@ function App() {
   async function deleteDoctor(username) {
     return api(`/admin/doctors/${encodeURIComponent(username)}`, { method: "DELETE" });
   }
+  // Gọi phiếu khảo sát của bệnh nhân trên hệ thống bệnh viện (qua backend để tránh CORS).
+  function loadSurvey(benh) {
+    return api(`/survey/${encodeURIComponent(patient.maBN)}${benh ? `?benh=${encodeURIComponent(benh)}` : ""}`);
+  }
+  // Tự lấy họ tên + ngày sinh khi mã bệnh nhân chưa có trong phần mềm.
+  async function lookupHIS(maBN, apply) {
+    const applyTo = apply || setPatient;
+    setHisMsg({ ok: true, text: "Đang tra cứu hệ thống bệnh viện..." });
+    try {
+      const r = await api(`/survey/${encodeURIComponent(maBN)}`);
+      if (!r.found) { setHisMsg({ ok: false, text: r.loi || "Hệ thống bệnh viện không có hồ sơ với mã này — nhập tay bên dưới." }); return; }
+      applyTo((prev) => ({
+        ...prev,
+        maBN: r.ma_bn || prev.maBN,
+        hoTen: r.ho_ten || prev.hoTen,
+        ngaySinh: r.ngay_sinh || prev.ngaySinh,
+        namSinh: r.nam_sinh || prev.namSinh,
+        gioiTinh: r.gioi_tinh || prev.gioiTinh,
+      }));
+      setHisMsg({ ok: true, text: `Đã lấy họ tên và ngày sinh từ hệ thống bệnh viện — bệnh nhân ${r.co_khao_sat ? "ĐÃ" : "CHƯA"} điền phiếu khảo sát.` });
+    } catch (e) { setHisMsg({ ok: false, text: "Không tra cứu được: " + e.message }); }
+  }
+
   async function uploadImage(blob) {
     const form = new FormData();
     form.append("file", blob, "photo.webp");
@@ -1900,7 +2288,7 @@ function App() {
         setAaCase(mapCaseFromApi(c)); setCurrentDisease("nonscar"); setView("timeline"); return;
       } catch (e) {}
       setAaCase(null); setView("chooseDisease");
-    } catch (e) { setPatient({ maBN: typed }); setAaCase(null); setView("newPatient"); }
+    } catch (e) { setPatient({ maBN: typed }); setAaCase(null); setHisMsg(null); setView("newPatient"); lookupHIS(typed); }
   }
   async function openRecord(row) {
     const p = await api(`/patients/${encodeURIComponent(row.maBN)}`);
@@ -1911,9 +2299,32 @@ function App() {
     if (row.followupId === null) { setView("newCase"); }
     else { const idx = cc.taiKhams.findIndex((tk) => tk.id === row.followupId); setEditIdx(idx >= 0 ? idx : 0); setView("followup"); }
   }
+  function patientPayload(p) {
+    return { ma_bn: p.maBN, ho_ten: p.hoTen, gioi_tinh: p.gioiTinh, nam_sinh: p.namSinh ? Number(p.namSinh) : null,
+             ngay_sinh: p.ngaySinh || null, dan_toc: p.danToc, dia_chi: p.diaChi, sdt: p.sdt };
+  }
   async function savePatientAndGoChoose(p) {
-    await api("/patients", { method: "POST", body: JSON.stringify({ ma_bn: p.maBN, ho_ten: p.hoTen, gioi_tinh: p.gioiTinh, nam_sinh: p.namSinh ? Number(p.namSinh) : null, dan_toc: p.danToc, dia_chi: p.diaChi, sdt: p.sdt }) });
+    await api("/patients", { method: "POST", body: JSON.stringify(patientPayload(p)) });
     setPatient(p); setView("chooseDisease");
+  }
+  // Sửa thông tin hành chính (địa chỉ, số điện thoại...) — bác sĩ và tài khoản nghiên cứu
+  function startEditPatient() { setPatientDraft({ ...patient }); setHisMsg(null); setView("editPatient"); }
+  async function savePatientEdit() {
+    await api("/patients", { method: "POST", body: JSON.stringify(patientPayload(patientDraft)) });
+    setPatient(patientDraft); setPatientDraft(null); setHisMsg(null);
+    setView(aaCase ? "timeline" : "chooseDisease");
+  }
+  // Bấm vào mã bệnh nhân trong phiếu đang mở -> lưu nốt phiếu rồi chuyển sang xem toàn bộ lần khám
+  async function openTimelineFromForm() {
+    const draft = draftRef.current;
+    try {
+      if (view === "newCase" && draft) { await saveNewCase(draft); return; }
+      if (view === "followup" && draft) { await saveFollowUp(draft); return; }
+    } catch (e) {
+      window.alert("Không lưu được phiếu đang mở nên chưa chuyển màn: " + e.message);
+      return;
+    }
+    setView("timeline");
   }
   async function createCase(disease) {
     setCurrentDisease(disease);
@@ -2000,6 +2411,8 @@ function App() {
     thuThuatCo: "6_Dieutri", thuThuatLoai: "6_Dieutri", thuThuatKhac: "6_Dieutri",
     anh: "7_Anh",
     gpbCo: "8_GPB", gpbNgayThucHien: "8_GPB", gpbKetQua: "8_GPB",
+    // phiếu khảo sát bệnh nhân tự điền (đồng bộ từ hệ thống bệnh viện)
+    khaoSat: "9_KhaoSat", khaoSatNgay: "9_KhaoSat", khaoSatDlqiTong: "9_KhaoSat",
     // trường riêng của AGA / Rụng tóc không sẹo
     luuHuyetTuong: "0_HC", luuHuyetThanh: "0_HC",
     thoiGianKhoiPhat: "1_BSTS", rungTocTruocDay: "1_BSTS", soLanTaiPhat: "1_BSTS", anKiengGiamCan: "1_BSTS", benhLyKhac: "1_BSTS",
@@ -2018,7 +2431,7 @@ function App() {
     cumulativeThickness: "4_Dermoscopy", dermoscopyKhac: "4_Dermoscopy",
     vungTran: "4_Dermoscopy", vungDinh: "4_Dermoscopy", vungCham: "4_Dermoscopy",
   };
-  const CONTAINER_ABBR = { vung: null, dermoscopy: null, labs: null, tdkm: "tdkm", tienSuBanThan: "tsbt", tienSuGiaDinh: "tsgd" };
+  const CONTAINER_ABBR = { vung: null, dermoscopy: null, labs: null, tdkm: "tdkm", tienSuBanThan: "tsbt", tienSuGiaDinh: "tsgd", khaoSat: null };
   function stripDiacritics(s) {
     return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
   }
@@ -2039,15 +2452,15 @@ function App() {
   // Bản tóm tắt: mỗi dòng 1 lần khám, chỉ các cột cốt lõi hay dùng để lọc/thống kê nhanh
   async function exportExcelTomTat() {
     const groups = await api(`/export/raw${searchFilters.benh ? `?benh=${searchFilters.benh}` : ""}`);
-    const headers = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay", "saltScore", "mucDoNang", "dieuTri"];
+    const headers = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "ngaySinh", "danToc", "diaChi", "sdt", "lanKham", "ngay", "saltScore", "mucDoNang", "dieuTri"];
     const rows = [];
     for (const { benh, maBN, case: c, patient: p } of groups) {
       const isAA = benh === "AA"; // SALT chỉ áp dụng cho AA, các bệnh khác để trống thay vì hiện số gây hiểu nhầm
       const saltT0 = isAA ? calcSalt(c.benhAnMoi?.vung || {}) : null;
-      rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao, isAA ? fmt(saltT0) : "", isAA ? mucDoSauDieuChinh(saltT0, c.benhAnMoi?.yeuToNangBac) : "", c.benhAnMoi?.dieuTri || ""]);
+      rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.ngaySinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao, isAA ? fmt(saltT0) : "", isAA ? mucDoSauDieuChinh(saltT0, c.benhAnMoi?.yeuToNangBac) : "", c.benhAnMoi?.dieuTri || ""]);
       (c.taiKhams || []).forEach((tk, i) => {
         const s = isAA ? calcSalt(tk.vung || {}) : null;
-        rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham, isAA ? fmt(s) : "", isAA ? mucDoSauDieuChinh(s, tk.yeuToNangBac) : "", tk.dieuTri || ""]);
+        rows.push([benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.ngaySinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham, isAA ? fmt(s) : "", isAA ? mucDoSauDieuChinh(s, tk.yeuToNangBac) : "", tk.dieuTri || ""]);
       });
     }
     downloadXlsx("Tóm tắt", headers, rows, "tomtat.xlsx");
@@ -2056,12 +2469,12 @@ function App() {
   // Bản đầy đủ theo LẦN KHÁM: mỗi dòng 1 lần khám, cột đặt tên theo quy ước mục_trường
   async function exportExcelDayDuTheoLanKham() {
     const groups = await api(`/export/raw${searchFilters.benh ? `?benh=${searchFilters.benh}` : ""}`);
-    const baseCols = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "lanKham", "ngay"];
+    const baseCols = ["benh", "maLuuTru", "maBN", "hoTen", "gioiTinh", "namSinh", "ngaySinh", "danToc", "diaChi", "sdt", "lanKham", "ngay"];
     const records = [];
     for (const { benh, maBN, case: c, patient: p } of groups) {
-      records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao], flat: flattenRecord(c.benhAnMoi, "", {}) });
+      records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.ngaySinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", "T0", c.ngayTao], flat: flattenRecord(c.benhAnMoi, "", {}) });
       (c.taiKhams || []).forEach((tk, i) => {
-        records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham], flat: flattenRecord(tk, "", {}) });
+        records.push({ base: [benh, c.maLuuTru, maBN, p?.hoTen || "", p?.gioiTinh || "", p?.namSinh || "", p?.ngaySinh || "", p?.danToc || "", p?.diaChi || "", p?.sdt || "", `Tái khám ${i + 1}`, tk.ngayKham], flat: flattenRecord(tk, "", {}) });
       });
     }
     const rawKeysSet = new Set();
@@ -2080,7 +2493,7 @@ function App() {
     for (const { benh, maBN, case: c, patient: p } of groups) {
       const visits = [flattenRecord(c.benhAnMoi, "", {}), ...(c.taiKhams || []).map((tk) => flattenRecord(tk, "", {}))];
       maxVisits = Math.max(maxVisits, visits.length);
-      perPatient.push({ benh, maBN, hoTen: p?.hoTen || "", gioiTinh: p?.gioiTinh || "", namSinh: p?.namSinh || "", danToc: p?.danToc || "", diaChi: p?.diaChi || "", sdt: p?.sdt || "", maHoSo: c.maLuuTru, visits });
+      perPatient.push({ benh, maBN, hoTen: p?.hoTen || "", gioiTinh: p?.gioiTinh || "", namSinh: p?.namSinh || "", ngaySinh: p?.ngaySinh || "", danToc: p?.danToc || "", diaChi: p?.diaChi || "", sdt: p?.sdt || "", maHoSo: c.maLuuTru, visits });
     }
     const rawKeysPerSlot = [];
     for (let i = 0; i < maxVisits; i++) {
@@ -2088,13 +2501,13 @@ function App() {
       perPatient.forEach((pp) => { if (pp.visits[i]) Object.keys(pp.visits[i]).forEach((k) => set.add(k)); });
       rawKeysPerSlot.push(Array.from(set).sort((a, b) => buildColumnName(a).localeCompare(buildColumnName(b))));
     }
-    const headers = ["benh", "maBN", "hoTen", "gioiTinh", "namSinh", "danToc", "diaChi", "sdt", "maHoSo"];
+    const headers = ["benh", "maBN", "hoTen", "gioiTinh", "namSinh", "ngaySinh", "danToc", "diaChi", "sdt", "maHoSo"];
     for (let i = 0; i < maxVisits; i++) {
       const tPrefix = "T" + i;
       rawKeysPerSlot[i].forEach((k) => headers.push(`${tPrefix}_${buildColumnName(k)}`));
     }
     const rows = perPatient.map((pp) => {
-      const row = [pp.benh, pp.maBN, pp.hoTen, pp.gioiTinh, pp.namSinh, pp.danToc, pp.diaChi, pp.sdt, pp.maHoSo];
+      const row = [pp.benh, pp.maBN, pp.hoTen, pp.gioiTinh, pp.namSinh, pp.ngaySinh, pp.danToc, pp.diaChi, pp.sdt, pp.maHoSo];
       for (let i = 0; i < maxVisits; i++) rawKeysPerSlot[i].forEach((k) => row.push(pp.visits[i]?.[k] ?? ""));
       return row;
     });
@@ -2242,16 +2655,27 @@ function App() {
     />}
 
     {view === "newPatient" && <div className="bg-white border border-gray-200 rounded-lg p-5">
-      <div className="text-sm text-gray-500 mb-3">Mã {patient.maBN} chưa có — nhập thông tin hành chính.</div>
-      <div className="grid sm:grid-cols-2 gap-x-6">
-        <Field label="Họ và tên"><TextInput value={patient.hoTen} onChange={(v) => setPatient({ ...patient, hoTen: v })} /></Field>
-        <Field label="Giới"><RadioGroup options={["Nam", "Nữ"]} value={patient.gioiTinh} onChange={(v) => setPatient({ ...patient, gioiTinh: v })} /></Field>
-        <Field label="Năm sinh"><TextInput type="number" value={patient.namSinh} onChange={(v) => setPatient({ ...patient, namSinh: v })} /></Field>
-        <Field label="Dân tộc"><TextInput value={patient.danToc} onChange={(v) => setPatient({ ...patient, danToc: v })} /></Field>
-        <Field label="Số điện thoại"><TextInput value={patient.sdt} onChange={(v) => setPatient({ ...patient, sdt: v })} /></Field>
-        <Field label="Địa chỉ"><TextInput value={patient.diaChi} onChange={(v) => setPatient({ ...patient, diaChi: v })} /></Field>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="text-sm text-gray-500">Mã {patient.maBN} chưa có — nhập thông tin hành chính.</div>
+        <button className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-md hover:bg-teal-100" onClick={() => lookupHIS(patient.maBN)}>⟳ Tra cứu lại từ hệ thống bệnh viện</button>
       </div>
+      {hisMsg && <div className={`text-xs rounded-md px-3 py-2 mb-3 ${hisMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{hisMsg.text}</div>}
+      <PatientFields patient={patient} onChange={setPatient} />
       <button className="mt-2 px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={() => savePatientAndGoChoose(patient)}>Lưu và tiếp tục</button>
+    </div>}
+
+    {view === "editPatient" && patientDraft && <div className="bg-white border border-gray-200 rounded-lg p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div className="text-sm text-gray-500">Sửa thông tin hành chính — {patientDraft.hoTen || "chưa có tên"} ({patientDraft.maBN})</div>
+        <button className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-md hover:bg-teal-100" onClick={() => lookupHIS(patientDraft.maBN, setPatientDraft)}>⟳ Lấy lại từ hệ thống bệnh viện</button>
+      </div>
+      {hisMsg && <div className={`text-xs rounded-md px-3 py-2 mb-3 ${hisMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{hisMsg.text}</div>}
+      <div className="text-xs text-gray-400 mb-2">Mã bệnh nhân không sửa được — mã là khoá nối với toàn bộ bệnh án đã có.</div>
+      <PatientFields patient={patientDraft} onChange={setPatientDraft} />
+      <div className="flex gap-2 mt-2">
+        <button className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700" onClick={savePatientEdit}>Lưu thay đổi</button>
+        <button className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200" onClick={() => { setPatientDraft(null); setHisMsg(null); setView(aaCase ? "timeline" : "chooseDisease"); }}>Huỷ</button>
+      </div>
     </div>}
 
     {view === "chooseDisease" && patient && <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -2271,22 +2695,26 @@ function App() {
 
     {view === "newCase" && patient && aaCase && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="text-sm text-gray-500 flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN} · Mã lưu trữ <b className="ml-1">{aaCase.maLuuTru}</b></div>
+        <div className="text-sm text-gray-500 flex items-center flex-wrap gap-x-1"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} —
+          <button onClick={openTimelineFromForm} title="Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển"
+            className="text-teal-700 font-medium underline underline-offset-2 hover:text-teal-800">{patient.maBN}</button>
+          · Mã lưu trữ <b>{aaCase.maLuuTru}</b></div>
         <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
       </div>
       {currentDisease === "aga"
-        ? <NewAGAForm initial={aaCase.benhAnMoi} patientGioiTinh={patient.gioiTinh} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />
+        ? <NewAGAForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} patientGioiTinh={patient.gioiTinh} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
         : currentDisease === "nonscar"
-        ? <NewNonScarForm initial={aaCase.benhAnMoi} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />
-        : <NewCaseForm initial={aaCase.benhAnMoi} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} />}
+        ? <NewNonScarForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
+        : <NewCaseForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />}
     </div>}
 
     {view === "timeline" && patient && aaCase && <div>
       <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div><div className="font-medium flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN}</div><div className="text-xs text-gray-400">Mã lưu trữ {aaCase.maLuuTru} · {patient.gioiTinh}, sinh {patient.namSinh}</div></div>
+          <div><div className="font-medium flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN}</div><div className="text-xs text-gray-400">Mã lưu trữ {aaCase.maLuuTru} · {patient.gioiTinh}, sinh {patient.ngaySinh || patient.namSinh}</div></div>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 text-sm bg-gray-100 rounded-md hover:bg-gray-200" onClick={() => setView("newCase")}>Xem/sửa bệnh án mới</button>
+            {user.can_create && <button className="px-3 py-1.5 text-sm bg-gray-100 rounded-md hover:bg-gray-200" onClick={startEditPatient}>Sửa thông tin bệnh nhân</button>}
             {user.can_create && <button className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-md hover:bg-teal-700" onClick={createFollowup}>+ Tạo mã tái khám mới</button>}
             {user.can_export && <button className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá bệnh án ${currentDisease.toUpperCase()} này (bệnh án mới + mọi lần tái khám)? Giữ lại thông tin bệnh nhân. Không thể hoàn tác.`)) deleteCurrentCase(); }}>Xoá bệnh án này</button>}
             {user.can_export && <button className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá toàn bộ hồ sơ của "${patient.hoTen || patient.maBN}"? Không thể hoàn tác.`)) deletePatientRecord(patient.maBN); }}>Xoá hồ sơ</button>}
@@ -2334,17 +2762,20 @@ function App() {
 
     {view === "followup" && patient && aaCase && editIdx !== null && <div className="bg-white border border-gray-200 rounded-lg p-5">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div className="text-sm text-gray-500 flex items-center"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} — {patient.maBN} · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
+        <div className="text-sm text-gray-500 flex items-center flex-wrap gap-x-1"><DiseaseTag benh={currentDisease.toUpperCase()} />{patient.hoTen} —
+          <button onClick={openTimelineFromForm} title="Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển"
+            className="text-teal-700 font-medium underline underline-offset-2 hover:text-teal-800">{patient.maBN}</button>
+          · Mã lưu trữ {aaCase.maLuuTru} · Tái khám {editIdx + 1}</div>
         <span className="flex items-center">
           <ImageBadge data={aaCase.taiKhams[editIdx]} /><GpbBadge data={aaCase.taiKhams[editIdx]} /><StatusBadge done={aaCase.taiKhams[editIdx]?.daDienDuLieu} />
           {user.can_export && <button className="ml-2 px-2.5 py-1 text-xs bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá lần tái khám ${editIdx + 1}? Không thể hoàn tác.`)) deleteFollowupAt(editIdx); }}>Xoá lần tái khám này</button>}
         </span>
       </div>
       {currentDisease === "aga"
-        ? <AGAFollowUpForm initial={aaCase.taiKhams[editIdx]} patientGioiTinh={patient.gioiTinh} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+        ? <AGAFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} patientGioiTinh={patient.gioiTinh} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
         : currentDisease === "nonscar"
-        ? <NonScarFollowUpForm initial={aaCase.taiKhams[editIdx]} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
-        : <FollowUpForm initial={aaCase.taiKhams[editIdx]} saltT0={calcSalt(aaCase.benhAnMoi?.vung || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />}
+        ? <NonScarFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+        : <FollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} saltT0={calcSalt(aaCase.benhAnMoi?.vung || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />}
     </div>}
   </div></FieldMetaProvider>;
 }
