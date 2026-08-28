@@ -25,7 +25,6 @@
 </head>
 <body>
 <div id="root"></div>
-  <script>window.AA_API_BASE = "https://pkrt-dltw.onrender.com";</script>
 <script id="app-source" type="text/plain">
 const { useState, useEffect, useRef } = React;
 
@@ -122,6 +121,8 @@ const DISEASES = [
   { k: "AA", l: "Rụng tóc mảng (AA)", active: true },
   { k: "AGA", l: "Rụng tóc Androgen (AGA)", active: true },
   { k: "NONSCAR", l: "Rụng tóc không sẹo", active: true },
+  { k: "SA", l: "Rụng tóc sẹo (SA)", active: true },
+  { k: "TTM", l: "Tật nhổ tóc (TTM)", active: true },
 ];
 const SALT_VUNG = [
   { k: "dinh", l: "Đỉnh (Vertex)", w: 40 },
@@ -142,7 +143,8 @@ const VI_TRI_TON_THUONG = ["Da đầu", "Lông mày", "Lông mi", "Lông nách",
 const TON_THUONG_MONG = ["Chấm lõm", "Vệt trắng móng", "Móng thô ráp", "Liềm móng đỏ", "Khía dọc móng", "Khác", "Không"];
 const TRIEU_CHUNG_CO_NANG = ["Không triệu chứng", "Ngứa", "Đau rát/bỏng rát", "Châm chích/kiến bò"];
 const THE_LAM_SANG = ["AA khu trú", "Rụng tóc toàn bộ (AT)", "Rụng lông tóc toàn thân (AU)", "Dạng dải (Ophiasis)", "Bảo tồn rìa (Sisaipho)", "Lan tỏa (Diffuse AA)", "Marie Antoinette", "Quanh nốt ruồi"];
-const YEU_TO_NANG_BAC = ["Ảnh hưởng tâm lý-xã hội", "Tổn thương lông mày/mi", "Không đáp ứng ≥6 tháng", "Hoạt độ bệnh cao (pull test lan tỏa)"];
+const KHONG_CO_YEU_TO = "Không có yếu tố nào";
+const YEU_TO_NANG_BAC = ["Ảnh hưởng tâm lý-xã hội", "Tổn thương lông mày/mi", "Không đáp ứng ≥6 tháng", "Hoạt độ bệnh cao (pull test lan tỏa)", KHONG_CO_YEU_TO];
 const LABS = [
   ["hongCau","Hồng cầu","T/L"],["hgb","HGB","G/L"],["bachCau","Bạch cầu","G/L"],["bcat","BC ái toan","G/L"],
   ["tieuCau","Tiểu cầu","G/L"],["glucose","Glucose đói","mg/L"],["astAlt","AST/ALT","U/L"],["ureCreatinin","Ure/Creatinin","U/L"],
@@ -154,10 +156,11 @@ const LABS = [
 
 // ---------- hằng số riêng cho bệnh AGA (Rụng tóc Androgen) ----------
 const TIENSU_BANTHAN_AGA = ["Tăng huyết áp","Béo phì","Ung thư tuyến tiền liệt (nam)","Buồng trứng đa nang (nữ)","Rậm lông (nữ)","Bệnh lý tuyến giáp","Viêm da dầu","Trứng cá nặng","Suy giáp nặng","Cường giáp","Hội chứng Cushing","Suy thượng thận","Bệnh to đầu chi","Đái tháo đường","Đang dùng thuốc điều trị tăng đường máu","Đang dùng thuốc điều trị tăng triglycerid","Đang dùng thuốc điều trị giảm HDL-C","Dùng corticoid toàn thân ≥1 tháng","Dùng thuốc tránh thai phối hợp ≥1 tháng","Dùng thuốc chống loạn thần ≥3 tháng","Dùng ức chế protease HIV ≥6 tháng"];
-const DAU_HIEU_CUONG_ANDROGEN = ["Mụn", "Da dầu", "Rậm lông", "Kinh nguyệt bất thường (nữ)"];
-const HAMILTON_NORWOOD = ["I", "II", "III", "III Vertex", "IV", "V", "VI", "VII"];
-const SINCLAIR_SCALE = ["I", "II", "III", "IV", "V"];
-const LUDWIG_SCALE = ["I", "II", "III"];
+const DAU_HIEU_CUONG_ANDROGEN = ["Mụn", "Da dầu", "Rậm lông", "Kinh nguyệt bất thường (nữ)", "Không có dấu hiệu nào"];
+// "Không áp dụng" để thang điểm không phù hợp giới tính vẫn hoàn thành được mục bắt buộc
+const HAMILTON_NORWOOD = ["I", "II", "III", "III Vertex", "IV", "V", "VI", "VII", "Không áp dụng"];
+const SINCLAIR_SCALE = ["I", "II", "III", "IV", "V", "Không áp dụng"];
+const LUDWIG_SCALE = ["I", "II", "III", "Không áp dụng"];
 const PCOS_ROI_LOAN_KINH_NGUYET = ["Chu kỳ > 35 ngày hoặc < 21 ngày", "< 8 chu kỳ/năm", "> 90 ngày cho bất kỳ chu kỳ nào"];
 const PCOS_CUONG_ANDROGEN = ["Lâm sàng: Mụn/rậm lông/rụng tóc kiểu nam", "Sinh hoá: Free testosterone hoặc DHEA-SO4 tăng"];
 const PCOS_HINH_ANH_BUONG_TRUNG = ["≥12 nang nhỏ (2-9mm) mỗi buồng trứng", "Thể tích buồng trứng > 10 mL", "Nồng độ AMH tăng cao"];
@@ -200,7 +203,9 @@ function fmt(n) { return Math.round(n * 10) / 10; }
 function mucDoSauDieuChinh(salt, yeuToNangBac) {
   const base = mucDoFromSalt(salt);
   const idx = MUC_DO_LEVELS.indexOf(base);
-  if ((yeuToNangBac || []).length > 0 && idx < MUC_DO_LEVELS.length - 1) return MUC_DO_LEVELS[idx + 1];
+  // "Không có yếu tố nào" là cách bác sĩ khẳng định KHÔNG có — không được nâng bậc
+  const yt = (yeuToNangBac || []).filter((v) => v !== KHONG_CO_YEU_TO);
+  if (yt.length > 0 && idx < MUC_DO_LEVELS.length - 1) return MUC_DO_LEVELS[idx + 1];
   return base;
 }
 
@@ -213,8 +218,84 @@ function isFilled(v) {
   if (typeof v === "object") return Object.values(v).some(isFilled);
   return !!v;
 }
-function sectionFilled(data, keys) { return keys.some((k) => isFilled(data[k])); }
-function allSectionsFilled(data, sectionMap) { return Object.values(sectionMap).every((keys) => sectionFilled(data, keys)); }
+// Các mục BẮT BUỘC ĐIỀN HẾT mọi trường — khám thực thể và các thang điểm phải đầy đủ
+// mới dùng được cho nghiên cứu. Mọi mục khác chỉ cần >= 1 trường có giá trị.
+// Danh sách trường của mục bắt buộc chỉ gồm ô LUÔN HIỂN THỊ; ô phụ thuộc (chỉ hiện khi
+// chọn "Có") và ô tự tính (BMI, SALT, LPPAI, tổng MGH) cố ý không tính.
+// Logic này phải khớp tuyệt đối với is_strict_section()/section_filled() bên backend.
+const STRICT_PREFIXES = ["Khám thực thể", "Thang điểm", "Mức độ nặng"];
+function isStrictSection(name) { return STRICT_PREFIXES.some((p) => String(name).indexOf(p) === 0); }
+function sectionFilled(data, keys, name) {
+  if (isStrictSection(name)) return keys.every((k) => isFilled(getPath(data, k)));
+  return keys.some((k) => isFilled(getPath(data, k)));
+}
+function allSectionsFilled(data, sectionMap) {
+  return Object.keys(sectionMap).every((name) => sectionFilled(data, sectionMap[name], name));
+}
+// Nhãn tiếng Việt của các ô bắt buộc, để báo đúng tên ô còn thiếu thay vì chỉ tên mục.
+const FIELD_LABELS = {
+  sotStatus: "Sốt", mach: "Mạch", ha: "Huyết áp", pullTest: "Test kéo tóc", pullTestStatus: "Test kéo tóc",
+  chieuCao: "Chiều cao", canNang: "Cân nặng", vongBung: "Vòng bụng",
+  viTriRungToc: "Vị trí rụng tóc", viTriTonThuong: "Vị trí tổn thương", tonThuongMong: "Tổn thương móng",
+  trieuChungCoNang: "Triệu chứng cơ năng", theLamSang: "Thể lâm sàng", tocToMoc: "Tóc tơ mọc",
+  soLuongMang: "Số lượng mảng", dienTichThucTe: "Diện tích da đầu ước lượng", vung: "Bảng SALT",
+  mangDai: "Mảng to nhất — dài", mangRong: "Mảng to nhất — rộng", mangViTri: "Mảng to nhất — vị trí",
+  yeuToNangBac: "Yếu tố nâng bậc mức độ nặng", mucDoDapUng: "Mức độ đáp ứng",
+  dauHieuCuongAndrogen: "Dấu hiệu cường androgen", phanBoRungToc: "Phân bố rụng tóc",
+  matDoToc: "Mật độ tóc", duongKinhSoiToc: "Đường kính sợi tóc",
+  hamiltonNorwood: "Hamilton-Norwood", sinclairScale: "Sinclair", ludwig: "Ludwig",
+  "pcos.chanDoan": "Chẩn đoán xác định PCOS",
+  coNangDaDau: "Cơ năng tại da đầu", kieuRungToc: "Kiểu rụng tóc", dauHieuViemSeoTeoDa: "Dấu hiệu viêm, sẹo, teo da",
+  // Rụng tóc sẹo
+  ranhGioiTonThuong: "Ranh giới vùng tổn thương", dienTichPhanTram: "Diện tích tổn thương (%)",
+  luiChanToc: "Lùi đường chân tóc", tonThuongNgoaiDaDau: "Tổn thương ngoài da đầu",
+  "lppai.ngua": "LPPAI — Ngứa (0-10)", "lppai.dau": "LPPAI — Đau/bỏng (0-10)", "lppai.cangDa": "LPPAI — Căng da (0-10)",
+  "lppai.scaling": "LPPAI — Scaling (0-3)", "lppai.erythema": "LPPAI — Erythema (0-3)",
+  "lppai.pullTest": "LPPAI — Pull test (0-1)", "lppai.spreading": "LPPAI — Spreading (0-1)",
+  // Tật nhổ tóc
+  viTriDaDau: "Vị trí da đầu", viTriNgoaiDaDau: "Vùng lông ngoài da đầu",
+  hinhThaiTonThuong: "Hình thái tổn thương", dauHieuKemTheo: "Dấu hiệu kèm theo",
+  "mgh.q1": "MGH 1 — Tần suất thôi thúc", "mgh.q2": "MGH 2 — Cường độ thôi thúc",
+  "mgh.q3": "MGH 3 — Khả năng kiểm soát", "mgh.q4": "MGH 4 — Đau khổ do thôi thúc",
+  "mgh.q5": "MGH 5 — Thời gian nhổ tóc/ngày", "mgh.q6": "MGH 6 — Ảnh hưởng hoạt động xã hội",
+  "mgh.q7": "MGH 7 — Ảnh hưởng công việc/học tập",
+};
+function fieldLabel(path) { return FIELD_LABELS[path] || path; }
+
+// Bảng nhắc còn thiếu gì: mục bắt buộc thì chỉ đích danh từng ô, mục thường chỉ nêu tên mục.
+function MissingSummary({ data, sectionMap }) {
+  const thieuMuc = [], thieuO = [];
+  Object.keys(sectionMap).forEach((name) => {
+    const keys = sectionMap[name];
+    if (sectionFilled(data, keys, name)) return;
+    if (isStrictSection(name)) keys.filter((k) => !isFilled(getPath(data, k))).forEach((k) => thieuO.push(`${name}: ${fieldLabel(k)}`));
+    else thieuMuc.push(name);
+  });
+  if (thieuMuc.length === 0 && thieuO.length === 0) return null;
+  return <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">
+    {thieuMuc.length > 0 && <div>Còn thiếu ít nhất 1 trường ở mục: <b>{thieuMuc.join(", ")}</b></div>}
+    {thieuO.length > 0 && <div className={thieuMuc.length > 0 ? "mt-1" : ""}>
+      Mục bắt buộc điền đủ — còn trống {thieuO.length} ô: <b>{thieuO.join(" · ")}</b>
+    </div>}
+    <div className="mt-1 text-amber-600">Trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div>
+  </div>;
+}
+
+// ---------- điểm LPPAI (rụng tóc sẹo) và MGH-HPS (tật nhổ tóc) — khớp đúng backend ----------
+function toNum(v) { const n = Number(v); return v === "" || v === null || v === undefined || isNaN(n) ? null : n; }
+function calcLppai(d) {
+  const tc = ["ngua", "dau", "cangDa"].map((k) => toNum(getPath(d, `lppai.${k}`)));
+  const ls = ["scaling", "erythema", "pullTest", "spreading"].map((k) => toNum(getPath(d, `lppai.${k}`)));
+  if (tc.concat(ls).some((v) => v === null)) return null;
+  return Math.round((tc.reduce((a, b) => a + b, 0) / 3) * ls.reduce((a, b) => a + b, 0) * 100) / 100;
+}
+function mucDoLppai(score) { return score === null ? null : (score <= 2.5 ? "Ổn định" : "Đang hoạt động"); }
+function calcMgh(d) {
+  const vals = [1, 2, 3, 4, 5, 6, 7].map((i) => toNum(getPath(d, `mgh.q${i}`)));
+  if (vals.some((v) => v === null)) return null;
+  return vals.reduce((a, b) => a + b, 0);
+}
+function mucDoMgh(t) { return t === null ? null : (t <= 7 ? "Nhẹ" : t <= 15 ? "Trung bình" : "Nặng"); }
 
 const NEW_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "ngheNghiep", "trinhDo", "chieuCao", "canNang"],
@@ -239,7 +320,7 @@ const NEW_AGA_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "luuHuyetTuong", "luuHuyetThanh"],
   "Bệnh sử - Tiền sử": ["thoiGianKhoiPhat", "benhSuTruoc", "tienSuBanThan", "tienSuGiaDinh"],
   "Khám thực thể": ["canNang", "chieuCao", "vongBung", "mach", "ha", "dauHieuCuongAndrogen", "phanBoRungToc", "matDoToc", "duongKinhSoiToc", "pullTest"],
-  "Thang điểm": ["hamiltonNorwood", "sinclairScale", "ludwig", "pcos"],
+  "Thang điểm": ["hamiltonNorwood", "sinclairScale", "ludwig", "pcos.chanDoan"],
   "Dermoscopy": ["dermoscopy", "vungTran", "vungDinh", "vungCham"],
   "Cận lâm sàng": ["labs", "sieuAmOBung", "sieuAmTuyenGiap", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
@@ -478,6 +559,19 @@ function YesNoUnknownTable({ rows, data, onChange }) {
     ))}
   </div>;
 }
+// Giống YesNoUnknownTable nhưng chỉ 2 lựa chọn Có/Không (dùng cho thói quen, hành vi, MBH, tác dụng phụ)
+function YesNoTable({ rows, data, onChange }) {
+  return <div className="border border-gray-200 rounded-md overflow-hidden">
+    {rows.map((r, i) => (
+      <div key={r} className={`flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2 text-sm ${i % 2 ? "bg-gray-50" : "bg-white"}`}>
+        <div className="sm:w-96 text-gray-700">{r}</div>
+        <RadioGroup options={["Có", "Không"]} value={getPath(data, `${r}.status`)} onChange={(v) => onChange(r, "status", v)} />
+        <input placeholder="Chi tiết" value={getPath(data, `${r}.detail`, "")} onChange={(e) => onChange(r, "detail", e.target.value)}
+          className="flex-1 border border-gray-300 rounded-md px-2 py-1 text-sm" />
+      </div>
+    ))}
+  </div>;
+}
 function SaltTable({ vung, onChange }) {
   const total = calcSalt(vung);
   return <div>
@@ -581,6 +675,8 @@ const DISEASE_TAG_STYLE = {
   AA: "bg-red-100 text-red-700",
   AGA: "bg-blue-100 text-blue-700",
   NONSCAR: "bg-amber-100 text-amber-800",
+  SA: "bg-purple-100 text-purple-700",
+  TTM: "bg-emerald-100 text-emerald-700",
 };
 function DiseaseTag({ benh }) {
   if (!benh) return null;
@@ -1006,7 +1102,7 @@ function NewCaseForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fe
       {SECTIONS_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_CASE_SECTIONS, s), s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
       <QuickFillButton targets={qfTargets} onApply={quickFill} />
@@ -1165,8 +1261,7 @@ function NewCaseForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fe
     {tab < SECTIONS_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_NEW[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(NEW_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_CASE_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={NEW_CASE_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -1195,7 +1290,7 @@ function FollowUpForm({ initial, onDraftChange, saltT0, onSave, onCancel, upload
       {SECTIONS_FU.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_SECTIONS[s], s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
       <QuickFillButton targets={qfTargets} onApply={quickFill} />
@@ -1293,8 +1388,7 @@ function FollowUpForm({ initial, onDraftChange, saltT0, onSave, onCancel, upload
     {tab < SECTIONS_FU.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_FU[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(FOLLOWUP_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={FOLLOWUP_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -1325,7 +1419,7 @@ function NewAGAForm({ initial, onDraftChange, patientGioiTinh, onSave, onCancel,
       {SECTIONS_AGA_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_AGA_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_AGA_CASE_SECTIONS, s), s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
       <QuickFillButton targets={qfTargets} onApply={quickFill} />
@@ -1469,8 +1563,7 @@ function NewAGAForm({ initial, onDraftChange, patientGioiTinh, onSave, onCancel,
     {tab < SECTIONS_AGA_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_AGA_NEW[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(NEW_AGA_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_AGA_CASE_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={NEW_AGA_CASE_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -1493,7 +1586,7 @@ function AGAFollowUpForm({ initial, onDraftChange, patientGioiTinh, onSave, onCa
       {SECTIONS_AGA_FU.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s], s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
     </div>
@@ -1511,12 +1604,13 @@ function AGAFollowUpForm({ initial, onDraftChange, patientGioiTinh, onSave, onCa
     </div>}
 
     {tab === 1 && <div>
-      <div className="text-xs text-gray-400 mb-2">Bảng thang điểm hiện theo giới tính bệnh nhân đã ghi nhận ở hành chính ({patientGioiTinh || "chưa rõ giới"}) — nếu chưa rõ, hiện cả 3 bảng.</div>
-      {(showSinclair || !patientGioiTinh) && <>
-        <Field label="Bảng 2: Rụng tóc hói kiểu nữ (Sinclair scale)"><RadioGroup options={SINCLAIR_SCALE} value={d.sinclairScale} onChange={(v) => set("sinclairScale", v)} /></Field>
-        <Field label="Bảng 3: Thang điểm Ludwig"><RadioGroup options={LUDWIG_SCALE} value={d.ludwig} onChange={(v) => set("ludwig", v)} /></Field>
-      </>}
-      {(!showSinclair || !patientGioiTinh) && <Field label="Bảng 1: Rụng tóc hói kiểu nam (Hamilton - Norwood)"><RadioGroup options={HAMILTON_NORWOOD} value={d.hamiltonNorwood} onChange={(v) => set("hamiltonNorwood", v)} /></Field>}
+      <div className="text-xs text-gray-400 mb-2">
+        Bệnh nhân {patientGioiTinh || "chưa rõ giới"}. Mục Thang điểm bắt buộc điền đủ cả 3 bảng —
+        bảng không phù hợp giới tính thì chọn <b>“Không áp dụng”</b>{showSinclair ? " (thường là bảng Hamilton-Norwood)" : patientGioiTinh ? " (thường là Sinclair và Ludwig)" : ""}.
+      </div>
+      <Field label="Bảng 1: Rụng tóc hói kiểu nam (Hamilton - Norwood)"><RadioGroup options={HAMILTON_NORWOOD} value={d.hamiltonNorwood} onChange={(v) => set("hamiltonNorwood", v)} /></Field>
+      <Field label="Bảng 2: Rụng tóc hói kiểu nữ (Sinclair scale)"><RadioGroup options={SINCLAIR_SCALE} value={d.sinclairScale} onChange={(v) => set("sinclairScale", v)} /></Field>
+      <Field label="Bảng 3: Thang điểm Ludwig"><RadioGroup options={LUDWIG_SCALE} value={d.ludwig} onChange={(v) => set("ludwig", v)} /></Field>
     </div>}
 
     {tab === 2 && <div>
@@ -1574,8 +1668,7 @@ function AGAFollowUpForm({ initial, onDraftChange, patientGioiTinh, onSave, onCa
     {tab < SECTIONS_AGA_FU.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_AGA_FU[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(FOLLOWUP_AGA_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_AGA_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={FOLLOWUP_AGA_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -1606,7 +1699,7 @@ function NewNonScarForm({ initial, onDraftChange, onSave, onCancel, uploadImage,
       {SECTIONS_NS_NEW.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_NONSCAR_CASE_SECTIONS, s)) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_NONSCAR_CASE_SECTIONS, s), s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
       <QuickFillButton targets={qfTargets} onApply={quickFill} />
@@ -1760,8 +1853,7 @@ function NewNonScarForm({ initial, onDraftChange, onSave, onCancel, uploadImage,
     {tab < SECTIONS_NS_NEW.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_NS_NEW[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(NEW_NONSCAR_CASE_SECTIONS).filter((s) => !sectionFilled(d, NEW_NONSCAR_CASE_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={NEW_NONSCAR_CASE_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -1783,7 +1875,7 @@ function NonScarFollowUpForm({ initial, onDraftChange, onSave, onCancel, uploadI
       {SECTIONS_NS_FU.map((s, i) => (
         <button key={s} onClick={() => setTab(i)}
           className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_NONSCAR_SECTIONS[s]) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_NONSCAR_SECTIONS[s], s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
         </button>
       ))}
     </div>
@@ -1833,8 +1925,811 @@ function NonScarFollowUpForm({ initial, onDraftChange, onSave, onCancel, uploadI
     {tab < SECTIONS_NS_FU.length - 1 && <div className="flex justify-end mt-4">
       <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_NS_FU[tab + 1]} →</button>
     </div>}
-    {(() => { const missing = Object.keys(FOLLOWUP_NONSCAR_SECTIONS).filter((s) => !sectionFilled(d, FOLLOWUP_NONSCAR_SECTIONS[s]));
-      return missing.length > 0 ? <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2 mt-4">Còn thiếu ít nhất 1 trường ở mục: {missing.join(", ")} — trạng thái sẽ hiện "Chưa điền" cho tới khi đủ.</div> : null; })()}
+    <MissingSummary data={d} sectionMap={FOLLOWUP_NONSCAR_SECTIONS} />
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
+// ================= RỤNG TÓC SẸO (SA — Scarring Alopecia) =================
+const ICD10_SA = [
+  "L66 Rụng tóc sẹo (chưa phân loại)",
+  "L66.0 Pseudopelade of Brocq",
+  "L66.1 Lichen planopilaris (LPP)",
+  "L66.2 Viêm nang lông rụng tóc sẹo (FD)",
+  "L66.3 Viêm quanh nang mủ da đầu (DC)",
+  "L66.4 Viêm nang lông teo đỏ dạng lưới",
+  "L66.8 Các dạng khác",
+];
+const LPP_THE = ["LPP kinh điển", "FFA", "Graham-Little"];
+const L668_KHAC = ["DLE", "CCCA", "FKN", "Erosive pustular dermatosis", "Khác"];
+const NAHRS = ["Lymphocytic", "Neutrophilic", "Mixed (Neutrophilic + Lymphocytic)", "Không phân loại được"];
+const YEU_TO_KHOI_PHAT_SA = ["Viêm nang lông", "Nhiễm trùng", "Tự miễn", "Sau tia xạ / bỏng / chấn thương", "Thuốc", "Không rõ", "Khác"];
+const VI_TRI_KHOI_PHAT_SA = ["Đỉnh", "Trán", "Thái dương", "Chẩm", "Lan tỏa", "Khác"];
+const TIEN_TRIEN_SA = ["Lan rộng", "Dừng lại", "Co rút sẹo"];
+const TIENSU_BANTHAN_SA = [
+  "Lupus ban đỏ hệ thống (SLE)", "Lichen phẳng ngoài da đầu (thân mình/miệng/móng)",
+  "Viêm tuyến giáp tự miễn (Hashimoto/Basedow)", "Bạch biến",
+  "Viêm khớp dạng thấp / bệnh tự miễn khác", "Nhiễm trùng tái phát do tụ cầu",
+  "Viêm nang lông tái phát / nhọt da đầu", "Tụ cầu vàng mang trùng (MRSA/MSSA)",
+  "Viêm da tiết bã nặng / Rosacea", "Hidradenitis suppurativa / Acne inversa",
+  "Mụn mủ nang lông (thân mình)", "Viêm da cơ địa / Vảy nến",
+  "Bỏng / chấn thương da đầu / tia xạ vùng đầu", "Rụng tóc không sẹo kèm theo (FPHL/AA...)",
+  "Bệnh lý khác",
+];
+const THOI_QUEN_TOC_SA = [
+  "Hóa chất làm thẳng/duỗi tóc", "Tóc giả / nối tóc / weave / wigs",
+  "Kiểu tóc tạo áp lực (tết chặt, búi chặt, cornrow)", "Nhiệt thường xuyên (duỗi, uốn, sấy)",
+  "Thuốc nhuộm / thuốc tẩy tóc", "Dầu/mỡ thoa da đầu thường xuyên", "Không chăm sóc đặc biệt",
+];
+const TIENSU_GIADINH_SA = ["Rụng tóc sẹo", "Lupus / bệnh tự miễn", "Bệnh lý cơ địa (VDCĐ, hen, dị ứng)", "Bệnh lý nang lông / mụn trứng cá nặng"];
+const CO_NANG_SA = ["Không triệu chứng", "Ngứa", "Đau", "Rát bỏng", "Căng da"];
+const VI_TRI_LUI_FFA = ["Trán-thái dương", "Gáy", "Toàn chu vi"];
+const TON_THUONG_NGOAI_SA = [
+  "Lông mày: rụng / thưa", "Lông mi: rụng / thưa", "Lông nách / lông mu / râu: rụng",
+  "Tổn thương da thân mình (LP, DLE, CCCA...)", "Ban nhạy cảm ánh sáng / malar rash",
+  "Niêm mạc miệng bất thường", "Móng bất thường (pitting, trachyonychia, pterygium)",
+  "Tuyến vú / nách / bẹn bất thường (hidradenitis)", "Không có tổn thương ngoài da đầu",
+];
+const VI_TRI_KHAO_SAT_SA = ["Bờ hoạt động (ưu tiên)", "Trung tâm sẹo", "Da lành đối chứng"];
+const DERMOSCOPY_SA = [
+  ["I. Dấu hiệu sẹo – nền da", ["Mất lỗ nang lông", "Vùng trắng xơ teo (scar-like)", "Nền da teo bóng"]],
+  ["II. Dấu hiệu nang lông", ["Nút sừng nang (follicular plugging)", "Vảy dạng ống / peripilar cast",
+    "Dày sừng nang lông lan tỏa", "Vảy dày kiểu mảng quanh nang", "Búi tóc / polytrichia (≥5 sợi/nang)",
+    "Chấm vàng", "Chấm đen", "Mụn mủ quanh nang"]],
+  ["III. Dấu hiệu viêm / hoạt tính", ["Hồng ban quanh nang", "Hồng ban nền lan tỏa"]],
+  ["IV. Dấu hiệu mạch máu", ["Mạch quanh nang dạng vòng (crown vessels)", "Mạch xuyên nang",
+    "Mạch dạng cành cây (arborizing)", "Mạch giãn thành vòng quanh lỗ nang", "Teleangiectasia khu trú"]],
+  ["V. Dấu hiệu sắc tố", ["Chấm/hạt xám xanh dạng bia bắn", "Chấm xám xanh lốm đốm quanh nang",
+    "Tăng sắc tố nâu quanh nang", "Halo trắng xơ quanh nang"]],
+  ["VI. Dấu hiệu theo thể bệnh", ["FFA: Lonely hair", "FFA: Vảy thân tóc dạng ống tại hairline",
+    "CCCA: Halo trắng đồng tâm quanh nang", "CCCA: Tóc dẹt / gãy tại lỗ nang",
+    "DLE: Nút sừng nang + chấm xám xanh", "FKN: Sẩn dày sừng quanh nang màu nâu đỏ"]],
+];
+const DERMOSCOPY_SA_TK = [
+  ["hongBanQuanhNang", "Hồng ban quanh nang", ["Không", "Nhẹ", "Vừa", "Nhiều"]],
+  ["vayCastQuanhNang", "Vảy / cast quanh nang", ["Không", "Có"]],
+  ["muMuQuanhNang", "Mụn mủ quanh nang", ["Không", "Có"]],
+  ["buiToc", "Búi tóc (tuft hair)", ["Không", "Có"]],
+  ["vungSeoTrang", "Vùng sẹo trắng", ["Không đổi", "Tăng", "Giảm"]],
+  ["dauHieuMoi", "Dấu hiệu mới", ["Không", "Có"]],
+];
+const LABS_SA = [
+  ["hongCau", "Hồng cầu", "T/L"], ["hgb", "HGB", "G/L"], ["bachCau", "Bạch cầu", "G/L"], ["tieuCau", "Tiểu cầu", "G/L"],
+  ["mauLang", "Máu lắng 1h/2h", "mm"], ["crp", "CRP", "mg/L"], ["glucose", "Glucose", "mmol/L"],
+  ["astAlt", "AST/ALT", "U/L"], ["ureCreatinin", "Ure/Creatinin", "µmol/L"], ["cholesterolTg", "Cholesterol/TG", "mmol/L"],
+  ["hdlLdl", "HDL-C / LDL-C", "mmol/L"], ["satHuyetThanh", "Sắt huyết thanh", "µg/dL"], ["ferritin", "Ferritin", "ng/mL"],
+  ["vitaminD", "Vitamin D", "ng/mL"], ["vitaminB12", "Vitamin B12", "pg/mL"],
+  ["anaHep2", "ANA Hep2 (hiệu giá + kiểu hình)", ""], ["ana23", "ANA 23 profile", ""],
+  ["antiDsdna", "Anti-dsDNA", "IU/mL"], ["antiSm", "Anti-Sm / anti-SSA/SSB", ""],
+  ["tsh", "TSH", "mIU/L"], ["ft4", "FT4", "pmol/L"], ["antiTpo", "Anti-TPO", "IU/mL"],
+  ["estradiol", "Estradiol", "pg/mL"], ["testosterone", "Testosterone", "ng/mL"], ["dheas", "DHEA-S", "µg/dL"],
+  ["lhFsh", "LH / FSH", "IU/L"], ["prolactin", "Prolactin", "ng/mL"], ["cortisol", "Cortisol sáng", "nmol/L"],
+  ["kem", "Kẽm huyết thanh", "µmol/L"], ["canxi", "Canxi toàn phần", "mmol/L"],
+];
+const MBH_SA = [
+  "Thâm nhiễm lympho bào quanh nang", "Thâm nhiễm BCĐNTT quanh nang", "Thâm nhiễm hỗn hợp lympho + BCĐNTT",
+  "Viêm quanh tuyến mồ hôi (eccrine hidradenitis)", "Viêm hạ bì / viêm mô dưới da",
+  "Bong sớm lớp áo trong nang lông (premature IRS desquamation)", "Dày sừng nang lông / plugging",
+  "Phá hủy / tiêu hủy nang tóc", "Teo đét nang tóc", "Kén keratin (isthmus cyst)",
+  "Viêm da bề mặt / giao diện (interface/lichenoid)", "Dày màng đáy nang lông",
+  "Xơ hóa vành đồng tâm quanh nang", "Xơ hóa mô đệm lan tỏa", "Mucin lắng đọng trong mô đệm",
+  "Mất tuyến bã / tuyến bã lạc chỗ", "Giãn mạch bì nông / đọng máu",
+];
+const NHUOM_DAC_BIET_SA = ["Alcian Blue (mucin – DLE)", "PAS (nấm / màng đáy)", "Gram (FD)", "CD3/CD4/CD8 IHC", "Khác", "Không nhuộm đặc biệt"];
+const THUOC_BOI_SA = ["Corticosteroid", "Tacrolimus", "Minoxidil", "Clindamycin", "Benzoyl peroxide", "Fusidic acid", "Dầu gội điều trị", "Khác"];
+const THU_THUAT_SA = ["Tiêm corticosteroid nội tổn thương (ILC)", "Corticosteroid xung TM (Pulse IV)", "NB-UVB", "PUVA", "Laser", "PRP", "Khác"];
+const THUOC_UONG_SA = ["Hydroxychloroquine", "Doxycycline", "Pioglitazone", "Dutasteride", "Finasteride", "Methotrexate",
+  "MMF", "Cyclosporine", "Prednisolone", "JAK inhibitor", "Clindamycin + Rifampicin", "Azithromycin",
+  "Isotretinoin", "Dapsone", "Zinc", "Acitretin", "Khác"];
+const TAC_DUNG_PHU_SA = [
+  "Rối loạn tiêu hóa", "Độc gan (tăng ALT/AST)", "Giảm bạch cầu / huyết học",
+  "Nhiễm trùng cơ hội (zona, nấm...)", "Tăng huyết áp / tim mạch", "Rối loạn kinh nguyệt (nữ)",
+  "Tăng đường huyết / chuyển hóa", "Nhạy cảm ánh sáng (hydroxychloroquine)",
+  "Lắng đọng võng mạc (hydroxychloroquine)", "Tác dụng phụ tại chỗ (teo da, giãn mạch)", "Khác",
+];
+const SECTIONS_SA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (LPPAI)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
+const SECTIONS_SA_FU = ["Lâm sàng", "Mức độ nặng (LPPAI)", "Dermoscopy", "Xét nghiệm & Tác dụng phụ", "Giải phẫu bệnh", "Điều trị", "Hình ảnh"];
+const NEW_SA_CASE_SECTIONS = {
+  "Hành chính": ["ngayKham", "bacSiKham", "icd10", "nahrs", "luuHuyetTuong", "luuHuyetThanh"],
+  "Bệnh sử - Tiền sử": ["tuoiKhoiPhat", "thoiGianMacBenh", "yeuToKhoiPhat", "viTriKhoiPhat",
+    "tienTrienTonThuong", "benhSuTruoc", "dieuTriTruocDoStatus", "tienSuBanThan", "thoiQuenChamSocToc", "tienSuGiaDinh"],
+  "Khám thực thể": ["sotStatus", "mach", "ha", "ranhGioiTonThuong", "dienTichPhanTram",
+    "trieuChungCoNang", "pullTest", "luiChanToc", "tonThuongNgoaiDaDau"],
+  "Mức độ nặng (LPPAI)": ["lppai.ngua", "lppai.dau", "lppai.cangDa", "lppai.scaling", "lppai.erythema", "lppai.pullTest", "lppai.spreading"],
+  "Dermoscopy": ["viTriKhaoSat", "dermoscopy"],
+  "Cận lâm sàng": ["labs", "soiNam", "cayViKhuan", "pcrDemodex", "xnKhac"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
+  "Hình ảnh": ["anh"],
+};
+const FOLLOWUP_SA_SECTIONS = {
+  "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "dienTichPhanTram", "thayDoiSoVoiTruoc", "trieuChungCoNang"],
+  "Mức độ nặng (LPPAI)": ["lppai.ngua", "lppai.dau", "lppai.cangDa", "lppai.scaling", "lppai.erythema", "lppai.pullTest", "lppai.spreading"],
+  "Dermoscopy": ["viTriKhaoSat", "dermoscopyTK", "ketLuanDermoscopy"],
+  "Xét nghiệm & Tác dụng phụ": ["xnStatus", "thuocDangDung", "tacDungPhu"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Điều trị": ["thuocUongCo", "thuocBoiCo", "thuThuatCo"],
+  "Hình ảnh": ["anh"],
+};
+
+// Bảng điểm LPPAI dùng chung cho bệnh án mới và tái khám
+function LppaiTable({ d, set }) {
+  const diem = calcLppai(d);
+  const row = (path, label, max) => (
+    <Field key={path} label={`${label} (0-${max})`}>
+      <TextInput type="number" value={getPath(d, `lppai.${path}`)} onChange={(v) => set(`lppai.${path}`, v)} />
+    </Field>
+  );
+  return <div>
+    <div className="text-sm font-medium text-gray-700 mb-1">Điểm triệu chứng (bệnh nhân tự chấm 0-10)</div>
+    <div className="grid sm:grid-cols-3 gap-x-4">
+      {row("ngua", "Ngứa", 10)}{row("dau", "Đau / bỏng rát", 10)}{row("cangDa", "Căng da", 10)}
+    </div>
+    <div className="text-sm font-medium text-gray-700 mb-1 mt-3">Điểm lâm sàng (bác sĩ chấm)</div>
+    <div className="grid sm:grid-cols-4 gap-x-4">
+      {row("scaling", "Scaling — vảy quanh nang", 3)}{row("erythema", "Erythema — hồng ban quanh nang", 3)}
+      {row("pullTest", "Pull test", 1)}{row("spreading", "Spreading — lan rộng", 1)}
+    </div>
+    <div className="mt-3 text-sm bg-teal-50 text-teal-800 rounded-md px-3 py-2 inline-block">
+      LPPAI = TB triệu chứng × (scaling + erythema + pull test + spreading) ={" "}
+      <span className="font-medium">{diem === null ? "— (điền đủ 7 ô)" : diem}</span>
+      {diem !== null && <span className="ml-2 px-2 py-0.5 rounded-full bg-white text-teal-800 text-xs">{mucDoLppai(diem)} (≤2,5 = ổn định)</span>}
+    </div>
+  </div>;
+}
+
+function NewSAForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fetchSurvey }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 1
+    ? [...tsTargets(TIENSU_BANTHAN_SA, "tienSuBanThan"), ...tsTargets(THOI_QUEN_TOC_SA, "thoiQuenChamSocToc", YESNO2), ...tsTargets(TIENSU_GIADINH_SA, "tienSuGiaDinh")]
+    : tab === 4 ? dermTargets(DERMOSCOPY_SA.reduce((a, g) => a.concat(g[1]), []))
+    : tab === 6 ? tsTargets(MBH_SA, "mbh", YESNO2) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
+  const applySurvey = (r) => setD((prev) => applySurveyToData(prev, r));
+
+  return <div>
+    {fetchSurvey && <SurveySyncBar benh="sa" data={d} fetchSurvey={fetchSurvey} onApply={applySurvey} />}
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_SA_NEW.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_SA_CASE_SECTIONS, s), s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
+    </div>
+
+    {tab === 0 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+        <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+        <Field label="Lưu huyết tương"><RadioGroup options={["Có", "Không"]} value={d.luuHuyetTuong} onChange={(v) => set("luuHuyetTuong", v)} /></Field>
+        <Field label="Lưu huyết thanh"><RadioGroup options={["Có", "Không"]} value={d.luuHuyetThanh} onChange={(v) => set("luuHuyetThanh", v)} /></Field>
+      </div>
+      <Field label="Mã bệnh ICD-10"><RadioGroup options={ICD10_SA} value={d.icd10} onChange={(v) => set("icd10", v)} /></Field>
+      {d.icd10 === "L66.1 Lichen planopilaris (LPP)" &&
+        <Field label="Thể LPP"><RadioGroup options={LPP_THE} value={d.lppThe} onChange={(v) => set("lppThe", v)} /></Field>}
+      {d.icd10 === "L66.8 Các dạng khác" && <>
+        <Field label="Dạng cụ thể"><RadioGroup options={L668_KHAC} value={d.l668Loai} onChange={(v) => set("l668Loai", v)} /></Field>
+        {d.l668Loai === "Khác" && <Field label="Ghi rõ"><TextInput value={d.l668Khac} onChange={(v) => set("l668Khac", v)} /></Field>}
+      </>}
+      <Field label="Phân loại NAHRS"><RadioGroup options={NAHRS} value={d.nahrs} onChange={(v) => set("nahrs", v)} /></Field>
+      <Field label="Chẩn đoán phân biệt bổ sung"><TextArea value={d.chanDoanPhanBiet} onChange={(v) => set("chanDoanPhanBiet", v)} rows={2} /></Field>
+    </div>}
+
+    {tab === 1 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Tuổi khởi phát"><TextInput value={d.tuoiKhoiPhat} onChange={(v) => set("tuoiKhoiPhat", v)} /></Field>
+        <Field label="Thời gian mắc bệnh"><TextInput value={d.thoiGianMacBenh} onChange={(v) => set("thoiGianMacBenh", v)} placeholder="VD: 18 tháng" /></Field>
+      </div>
+      <Field label="Yếu tố khởi phát"><CheckboxGroup options={YEU_TO_KHOI_PHAT_SA} value={d.yeuToKhoiPhat} onChange={(v) => set("yeuToKhoiPhat", v)} /></Field>
+      <Field label="Vị trí khởi phát"><CheckboxGroup options={VI_TRI_KHOI_PHAT_SA} value={d.viTriKhoiPhat} onChange={(v) => set("viTriKhoiPhat", v)} /></Field>
+      <Field label="Tiến triển vùng tổn thương"><RadioGroup options={TIEN_TRIEN_SA} value={d.tienTrienTonThuong} onChange={(v) => set("tienTrienTonThuong", v)} /></Field>
+      <Field label="Diễn biến đợt bệnh trước"><TextArea value={d.benhSuTruoc} onChange={(v) => set("benhSuTruoc", v)} /></Field>
+      <Field label="Điều trị trước đó">
+        <RadioGroup options={["Có", "Không", "Không biết"]} value={d.dieuTriTruocDoStatus} onChange={(v) => set("dieuTriTruocDoStatus", v)} />
+        {d.dieuTriTruocDoStatus === "Có" && <div className="mt-1"><TextArea value={d.dieuTriTruocChiTiet} onChange={(v) => set("dieuTriTruocChiTiet", v)} rows={2} /></div>}
+      </Field>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử bản thân – bệnh lý liên quan</div>
+        <YesNoUnknownTable rows={TIENSU_BANTHAN_SA} data={d.tienSuBanThan} onChange={(r, f, v) => set(`tienSuBanThan.${r}.${f}`, v)} /></div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Thói quen chăm sóc tóc</div>
+        <YesNoTable rows={THOI_QUEN_TOC_SA} data={d.thoiQuenChamSocToc} onChange={(r, f, v) => set(`thoiQuenChamSocToc.${r}.${f}`, v)} /></div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử gia đình</div>
+        <YesNoUnknownTable rows={TIENSU_GIADINH_SA} data={d.tienSuGiaDinh} onChange={(r, f, v) => set(`tienSuGiaDinh.${r}.${f}`, v)} /></div>
+    </div>}
+
+    {tab === 2 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Sốt">
+          <RadioGroup options={["Có", "Không"]} value={d.sotStatus} onChange={(v) => set("sotStatus", v)} />
+          {d.sotStatus === "Có" && <div className="mt-1"><TextInput value={d.sotDo} onChange={(v) => set("sotDo", v)} placeholder="°C" /></div>}
+        </Field>
+        <Field label="Mạch (lần/phút)"><TextInput type="number" value={d.mach} onChange={(v) => set("mach", v)} /></Field>
+        <Field label="Huyết áp (mmHg)"><TextInput value={d.ha} onChange={(v) => set("ha", v)} /></Field>
+      </div>
+      <Field label="Bất thường cơ quan khác">
+        <RadioGroup options={["Không", "Có"]} value={d.batThuongCoQuan?.status} onChange={(v) => set("batThuongCoQuan.status", v)} />
+        {d.batThuongCoQuan?.status === "Có" && <div className="mt-1"><TextInput value={d.batThuongCoQuan?.detail} onChange={(v) => set("batThuongCoQuan.detail", v)} /></div>}
+      </Field>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ranh giới vùng tổn thương"><RadioGroup options={["Rõ", "Không rõ"]} value={d.ranhGioiTonThuong} onChange={(v) => set("ranhGioiTonThuong", v)} /></Field>
+        <Field label="Diện tích tổn thương (% da đầu)"><TextInput type="number" value={d.dienTichPhanTram} onChange={(v) => set("dienTichPhanTram", v)} /></Field>
+      </div>
+      <Field label="Triệu chứng cơ năng"><CheckboxGroup options={CO_NANG_SA} value={d.trieuChungCoNang} onChange={(v) => set("trieuChungCoNang", v)} /></Field>
+      <Field label="Test kéo tóc (pull test)"><RadioGroup options={["Dương tính", "Âm tính"]} value={d.pullTest} onChange={(v) => set("pullTest", v)} /></Field>
+      <Field label="Lùi đường chân tóc (hairline recession)">
+        <RadioGroup options={["Không", "Có"]} value={d.luiChanToc} onChange={(v) => set("luiChanToc", v)} />
+        {d.luiChanToc === "Có" && <div className="mt-1 grid sm:grid-cols-2 gap-x-4">
+          <Field label="Mức lùi (cm)"><TextInput type="number" value={d.mucLuiCm} onChange={(v) => set("mucLuiCm", v)} /></Field>
+          <Field label="Vị trí lùi (FFA)"><CheckboxGroup options={VI_TRI_LUI_FFA} value={d.viTriLui} onChange={(v) => set("viTriLui", v)} /></Field>
+        </div>}
+      </Field>
+      <Field label="Tổn thương ngoài da đầu"><CheckboxGroup options={TON_THUONG_NGOAI_SA} value={d.tonThuongNgoaiDaDau} onChange={(v) => set("tonThuongNgoaiDaDau", v)} /></Field>
+    </div>}
+
+    {tab === 3 && <LppaiTable d={d} set={set} />}
+
+    {tab === 4 && <div>
+      <Field label="Vị trí khảo sát"><CheckboxGroup options={VI_TRI_KHAO_SAT_SA} value={d.viTriKhaoSat} onChange={(v) => set("viTriKhaoSat", v)} /></Field>
+      {DERMOSCOPY_SA.map(([nhom, items]) => (
+        <div key={nhom} className="mt-3">
+          <div className="text-sm font-medium text-gray-700 mb-1">{nhom}</div>
+          {items.map((item) => (
+            <div key={item} className="flex items-center justify-between py-1 border-b border-gray-100 text-sm">
+              <span>{item}</span><RadioGroup options={["Có", "Không"]} value={getPath(d, `dermoscopy.${item}`)} onChange={(v) => set(`dermoscopy.${item}`, v)} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>}
+
+    {tab === 5 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        {LABS_SA.map(([k, l, u]) => <Field key={k} label={`${l}${u ? ` (${u})` : ""}`}><TextInput value={getPath(d, `labs.${k}`)} onChange={(v) => set(`labs.${k}`, v)} /></Field>)}
+      </div>
+      <div className="mt-4 border border-gray-200 rounded-md p-3">
+        <div className="text-sm font-medium text-gray-700 mb-2">Vi sinh (bắt buộc nếu có mủ — nhóm Neutrophilic)</div>
+        <Field label="Soi tươi nấm">
+          <RadioGroup options={["Âm tính", "Dương tính"]} value={d.soiNam} onChange={(v) => set("soiNam", v)} />
+          {d.soiNam === "Dương tính" && <div className="mt-1"><TextInput value={d.soiNamLoai} onChange={(v) => set("soiNamLoai", v)} placeholder="Loài nấm" /></div>}
+        </Field>
+        <Field label="Cấy vi khuẩn da đầu + kháng sinh đồ"><TextArea value={d.cayViKhuan} onChange={(v) => set("cayViKhuan", v)} rows={2} /></Field>
+        <Field label="PCR Demodex / vi khuẩn kỵ khí (nếu nghi DC)"><TextInput value={d.pcrDemodex} onChange={(v) => set("pcrDemodex", v)} /></Field>
+      </div>
+      <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
+    </div>}
+
+    {tab === 6 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div>
+        <div className="grid sm:grid-cols-2 gap-x-6">
+          <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+          <Field label="Vị trí lấy mẫu"><RadioGroup options={["Bờ hoạt động (ưu tiên)", "Trung tâm sẹo", "Cả hai"]} value={d.gpbViTri} onChange={(v) => set("gpbViTri", v)} /></Field>
+        </div>
+        <Field label="Kết quả mô bệnh học"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+        <div className="mt-3"><div className="text-sm font-medium text-gray-700 mb-1">Đặc điểm mô bệnh học</div>
+          <YesNoTable rows={MBH_SA} data={d.mbh} onChange={(r, f, v) => set(`mbh.${r}.${f}`, v)} /></div>
+        <Field label="Nhuộm đặc biệt"><CheckboxGroup options={NHUOM_DAC_BIET_SA} value={d.nhuomDacBiet} onChange={(v) => set("nhuomDacBiet", v)} /></Field>
+        <Field label="Kết luận MBH phù hợp với chẩn đoán"><TextArea value={d.ketLuanMbh} onChange={(v) => set("ketLuanMbh", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 7 && <div>
+      <AGATreatmentSection label="Thuốc uống (toàn thân)" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_SA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
+      <AGATreatmentSection label="Bôi tại chỗ" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_SA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_SA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
+      <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
+    </div>}
+
+    {tab === 8 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+    {tab === 9 && <SurveyTab d={d} />}
+
+    {tab < SECTIONS_SA_NEW.length - 1 && <div className="flex justify-end mt-4">
+      <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_SA_NEW[tab + 1]} →</button>
+    </div>}
+    <MissingSummary data={d} sectionMap={NEW_SA_CASE_SECTIONS} />
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
+function SAFollowUpForm({ initial, onDraftChange, onSave, onCancel, uploadImage }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = tab === 3 ? tsTargets(TAC_DUNG_PHU_SA, "tacDungPhu", YESNO2) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
+
+  return <div>
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_SA_FU.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_SA_SECTIONS[s], s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
+    </div>
+
+    {tab === 0 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+        <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+      </div>
+      <Field label="Lâm sàng tổng quát"><TextArea value={d.lamSang} onChange={(v) => set("lamSang", v)} /></Field>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Test kéo tóc"><RadioGroup options={["Dương tính", "Âm tính"]} value={d.pullTest} onChange={(v) => set("pullTest", v)} /></Field>
+        <Field label="Diện tích hiện tại (% da đầu)"><TextInput type="number" value={d.dienTichPhanTram} onChange={(v) => set("dienTichPhanTram", v)} /></Field>
+        <Field label="Thay đổi so với lần trước"><RadioGroup options={["Tăng", "Giảm", "Không đổi"]} value={d.thayDoiSoVoiTruoc} onChange={(v) => set("thayDoiSoVoiTruoc", v)} /></Field>
+      </div>
+      <Field label="Triệu chứng cơ năng"><CheckboxGroup options={CO_NANG_SA} value={d.trieuChungCoNang} onChange={(v) => set("trieuChungCoNang", v)} /></Field>
+    </div>}
+
+    {tab === 1 && <LppaiTable d={d} set={set} />}
+
+    {tab === 2 && <div>
+      <Field label="Vị trí khảo sát"><CheckboxGroup options={VI_TRI_KHAO_SAT_SA} value={d.viTriKhaoSat} onChange={(v) => set("viTriKhaoSat", v)} /></Field>
+      {DERMOSCOPY_SA_TK.map(([k, label, opts]) => (
+        <Field key={k} label={label}><RadioGroup options={opts} value={getPath(d, `dermoscopyTK.${k}`)} onChange={(v) => set(`dermoscopyTK.${k}`, v)} /></Field>
+      ))}
+      {getPath(d, "dermoscopyTK.dauHieuMoi") === "Có" &&
+        <Field label="Dấu hiệu mới — ghi rõ"><TextInput value={d.dauHieuMoiChiTiet} onChange={(v) => set("dauHieuMoiChiTiet", v)} /></Field>}
+      <Field label="Kết luận dermoscopy"><TextArea value={d.ketLuanDermoscopy} onChange={(v) => set("ketLuanDermoscopy", v)} rows={2} /></Field>
+    </div>}
+
+    {tab === 3 && <div>
+      <Field label="Xét nghiệm theo dõi">
+        <RadioGroup options={["Không", "Có"]} value={d.xnStatus} onChange={(v) => set("xnStatus", v)} />
+        {d.xnStatus === "Có" && <div className="mt-1"><TextArea value={d.xnKetQua} onChange={(v) => set("xnKetQua", v)} rows={2} /></div>}
+      </Field>
+      <Field label="Cấy vi khuẩn / kháng sinh đồ (nếu có mủ)"><TextInput value={d.cayViKhuan} onChange={(v) => set("cayViKhuan", v)} /></Field>
+      <Field label="Thuốc đang dùng hiện tại"><TextArea value={d.thuocDangDung} onChange={(v) => set("thuocDangDung", v)} rows={2} /></Field>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tác dụng phụ thuốc đang dùng</div>
+        <YesNoTable rows={TAC_DUNG_PHU_SA} data={d.tacDungPhu} onChange={(r, f, v) => set(`tacDungPhu.${r}.${f}`, v)} /></div>
+    </div>}
+
+    {tab === 4 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 5 && <div>
+      <AGATreatmentSection label="Thuốc uống (toàn thân)" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_SA} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
+      <AGATreatmentSection label="Bôi tại chỗ" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_SA} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_SA} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
+    </div>}
+
+    {tab === 6 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+
+    {tab < SECTIONS_SA_FU.length - 1 && <div className="flex justify-end mt-4">
+      <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_SA_FU[tab + 1]} →</button>
+    </div>}
+    <MissingSummary data={d} sectionMap={FOLLOWUP_SA_SECTIONS} />
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
+// ================= TẬT NHỔ TÓC (TTM — Trichotillomania) =================
+const NGHE_NGHIEP_TTM = ["Học sinh / Sinh viên", "Nhân viên văn phòng", "Lao động chân tay", "Nội trợ", "Khác"];
+const TRINH_DO_TTM = ["Tiểu học", "THCS", "THPT", "Đại học / Sau ĐH"];
+const HOAN_CANH_KHOI_PHAT_TTM = ["Sau stress", "Không rõ lý do", "Thói quen dần dần", "Khác"];
+const AI_NHO_TOC = ["Tự nhổ", "Người khác nhổ hộ", "Cả hai"];
+const DIEU_TRI_TRUOC_TTM = ["Thuốc uống", "Thuốc xịt", "Điều chỉnh hành vi (HRT)", "Tâm lý trị liệu", "Không"];
+const DAP_UNG_TRUOC_TTM = ["Tốt", "Một phần", "Không đáp ứng", "Chưa điều trị"];
+const TIENSU_BANTHAN_TTM = [
+  "Bệnh lý tâm thần (lo âu, trầm cảm, OCD, ADHD...)", "Bệnh mạn tính khác (tim mạch, gan, thận...)",
+  "Tiền sử hen phế quản", "Tiền sử dị ứng thuốc / thức ăn", "Đang có thai / cho con bú (nữ)",
+  "Rối loạn nhổ tóc / tổn thương da tự gây (excoriation)",
+];
+const TRANH_THAI_TTM = ["Luôn luôn", "Thỉnh thoảng", "Không"];
+const TIENSU_GIADINH_TTM = ["Tật nhổ tóc / nhổ lông (BFRBs)", "Rối loạn tâm thần kinh (lo âu, OCD, Tourette, ADHD)", "Rụng tóc (AA, FPHL, RTS...)"];
+const NHAN_THUC_TTM = [
+  "BN biết / nhận thức / thừa nhận hành vi nhổ tóc", "Gia đình quan sát thấy hành vi nhổ tóc",
+  "Nhổ tóc VÔ THỨC khi làm việc khác (đọc sách, xem TV...)", "Nhổ tóc CÓ CHỦ ĐÍCH (thôi thúc, cưỡng bức)",
+  "Cảm giác thoải mái / thoả mãn SAU khi nhổ tóc", "Căng thẳng / bồn chồn TRƯỚC khi nhổ (tension buildup)",
+  "Cảm giác tội lỗi / xấu hổ sau nhổ tóc",
+];
+const TRIGGER_TTM = ["Xem TV / điện thoại", "Đọc sách / học bài", "Nằm trên giường", "Khi căng thẳng / lo âu",
+  "Khi buồn chán", "Khi một mình", "Không theo tình huống cụ thể", "Khác"];
+const TAN_SUAT_TTM = ["Hàng ngày", "Vài lần/tuần", "Thỉnh thoảng"];
+const THOI_DIEM_TTM = ["Sáng", "Trưa", "Tối", "Đêm", "Không theo giờ cố định"];
+const HANH_VI_SAU_NHO_TTM = ["Kiểm tra chân tóc (soi, ngửi, sờ)", "Cắn / nhai thân tóc", "Ăn tóc (trichophagia)"];
+const BFRB_TTM = ["Cắn móng tay / da quanh móng (onychophagia)", "Nhổ lông mày", "Nhổ lông mi",
+  "Nhổ lông vùng kín / nách / chân", "Gãi / cào da", "Cắn môi / má trong miệng"];
+const MGH_QUESTIONS = [
+  ["q1", "1. Tần suất thôi thúc nhổ tóc", "0 = Không bao giờ → 4 = Liên tục suốt ngày"],
+  ["q2", "2. Cường độ của thôi thúc", "0 = Không có → 4 = Cưỡng bức hoàn toàn"],
+  ["q3", "3. Khả năng kiểm soát hành vi", "0 = Kiểm soát được → 4 = Không kiểm soát được"],
+  ["q4", "4. Đau khổ do thôi thúc gây ra", "0 = Không → 4 = Đau khổ nặng nề"],
+  ["q5", "5. Thời gian dành cho việc nhổ tóc/ngày", "0 = 0 phút → 4 = > 8 giờ/ngày"],
+  ["q6", "6. Ảnh hưởng đến hoạt động xã hội", "0 = Không → 4 = Ngừng hoàn toàn các hoạt động"],
+  ["q7", "7. Ảnh hưởng đến công việc / học tập", "0 = Không → 4 = Mất khả năng làm việc/học"],
+];
+const VI_TRI_DA_DAU_TTM = ["Trán", "Đỉnh", "Thái dương trái", "Thái dương phải", "Chẩm", "Lan tỏa"];
+const VI_TRI_NGOAI_TTM = ["Lông mày", "Lông mi", "Râu", "Lông nách", "Lông mu / vùng kín", "Lông tay / chân", "Không có vùng nào ngoài da đầu"];
+const HINH_THAI_TTM = ["Mảng rụng không hoàn toàn (thưa, còn xen kẽ tóc ngắn)", "Mảng rụng hoàn toàn",
+  "Rụng lan tỏa", "Ranh giới không đều / hình dạng kỳ lạ", "Tóc gãy cụt ở nhiều chiều dài khác nhau"];
+const DAU_HIEU_KEM_TTM = ["Ngứa tại vùng nhổ", "Da dầu / tiết bã nhiều", "Sẩn đỏ / mụn mủ tại nang",
+  "Bong vảy da đầu", "Giãn mạch da đầu", "Sẹo / teo da (dấu hiệu RTS)", "Móng tay bất thường", "Không có dấu hiệu kèm theo"];
+const DERMOSCOPY_TTM = ["Tóc gãy nhiều chiều dài", "Chấm đen", "Tóc hình ngọn lửa (flame hairs)",
+  "Tóc hình hoa tulip (tulip hairs)", "Tóc chẻ ngọn (trichoptilosis)", "Tóc hình móc câu (hook hairs)",
+  "Tóc xoăn bất thường (coiled hairs)", "Tóc hình chữ V (V-sign)", "Tóc hình dấu chấm than",
+  "Tóc dạng bột / mảnh vụn (hair powder)", "Chấm vàng", "Mạch máu dạng giãn / xung huyết"];
+const DSM5_TTM = [
+  "1. Nhổ tóc tái diễn dẫn đến rụng tóc có thể nhìn thấy được",
+  "2. Cố gắng nhiều lần để giảm hoặc ngừng hành vi nhổ tóc nhưng thất bại",
+  "3. Gây đau khổ đáng kể hoặc suy giảm chức năng xã hội / nghề nghiệp / học tập",
+  "4. KHÔNG được giải thích tốt hơn bằng bệnh lý da liễu khác (nấm, AA...)",
+  "5. KHÔNG do tác dụng của chất kích thích hoặc bệnh lý nội khoa gây ra",
+];
+const HRT_TTM = [
+  "Hướng dẫn nhận biết hành vi (awareness training)", "Hướng dẫn phản ứng cạnh tranh (competing response)",
+  "Bảng theo dõi hành vi theo tuần (self-monitoring diary)", "Hỗ trợ xã hội (gia đình / nhóm hỗ trợ)",
+  "Chuyển tham vấn tâm lý / tâm thần",
+];
+const LABS_TTM = [
+  ["hongCau", "Hồng cầu", "T/L"], ["hgb", "HGB", "G/L"], ["bachCau", "Bạch cầu", "G/L"], ["tieuCau", "Tiểu cầu", "G/L"],
+  ["astAlt", "AST / ALT", "U/L"], ["ure", "Ure", "mmol/L"], ["creatinin", "Creatinin", "µmol/L"],
+  ["ferritin", "Ferritin", "ng/mL"], ["satHuyetThanh", "Sắt huyết thanh", "µg/dL"],
+  ["vitaminD", "Vitamin D", "ng/mL"], ["tsh", "TSH", "mIU/L"],
+];
+const THUOC_UONG_TTM = ["Acetylcysteine (NAC)", "SSRI (fluoxetine, sertraline...)", "Clomipramine", "Naltrexone", "Olanzapine", "Vitamin", "Khác"];
+const THUOC_BOI_TTM = ["Minoxidil", "Dưỡng chất da đầu", "Khác"];
+const THU_THUAT_TTM = ["Không", "Tiêm nội tổn thương", "Khác"];
+const SECTIONS_TTM_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Hành vi nhổ tóc", "Thang điểm (MGH-HPS)", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Chẩn đoán DSM-5", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
+const SECTIONS_TTM_FU = ["Lâm sàng", "Thang điểm (MGH-HPS)", "Dermoscopy", "Tác dụng phụ & Điều trị", "Giải phẫu bệnh", "Hình ảnh"];
+const NEW_TTM_CASE_SECTIONS = {
+  "Hành chính": ["ngayKham", "bacSiKham", "ngheNghiep", "trinhDo", "chieuCao", "canNang"],
+  "Bệnh sử - Tiền sử": ["tuoiKhoiPhat", "thoiGianMacBenh", "hoanCanhKhoiPhat", "aiNhoToc",
+    "dieuTriTruoc", "dapUngDieuTriTruoc", "tienSuBanThan", "tienSuGiaDinh"],
+  "Hành vi nhổ tóc": ["nhanThuc", "tinhHuongKichHoat", "tanSuatNhoToc", "thoiDiemTrongNgay", "hanhViSauNho", "bfrb"],
+  "Thang điểm (MGH-HPS)": ["mgh.q1", "mgh.q2", "mgh.q3", "mgh.q4", "mgh.q5", "mgh.q6", "mgh.q7"],
+  "Khám thực thể": ["viTriDaDau", "viTriNgoaiDaDau", "dienTichPhanTram", "mangDai", "mangRong",
+    "pullTest", "hinhThaiTonThuong", "dauHieuKemTheo"],
+  "Dermoscopy": ["dermoscopy"],
+  "Cận lâm sàng": ["labs", "viNam", "sieuAmBung", "xnKhac"],
+  "Chẩn đoán DSM-5": ["dsm5", "ketLuanChanDoan"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Điều trị & thủ thuật": ["hrt", "thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
+  "Hình ảnh": ["anh"],
+};
+const FOLLOWUP_TTM_SECTIONS = {
+  "Lâm sàng": ["ngayKham", "bacSiKham", "soVoiLanTruoc", "nhoTocGiua2Lan", "tuanThuDieuTri",
+    "dienTichPhanTram", "tocMocLai", "mangRungMoi", "dauHieuRTS"],
+  "Thang điểm (MGH-HPS)": ["mgh.q1", "mgh.q2", "mgh.q3", "mgh.q4", "mgh.q5", "mgh.q6", "mgh.q7"],
+  "Dermoscopy": ["dauHieuTraumatic", "loNang", "tocMocLaiDuoiKinh", "ketLuanDermoscopy"],
+  "Tác dụng phụ & Điều trị": ["tacDungPhuStatus", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
+  "Giải phẫu bệnh": ["gpbCo"],
+  "Hình ảnh": ["anh"],
+};
+
+// Thang MGH-HPS dùng chung cho bệnh án mới và tái khám
+function MghTable({ d, set }) {
+  const tong = calcMgh(d);
+  return <div>
+    <div className="text-xs text-gray-500 mb-2">7 câu, mỗi câu 0-4 điểm, tổng 0-28. Điền theo trả lời của bệnh nhân.</div>
+    {MGH_QUESTIONS.map(([k, label, dienGiai]) => (
+      <div key={k} className="py-2 border-b border-gray-100">
+        <div className="text-sm text-gray-700">{label}</div>
+        <div className="text-xs text-gray-400 mb-1">{dienGiai}</div>
+        <RadioGroup options={["0", "1", "2", "3", "4"]} value={getPath(d, `mgh.${k}`)} onChange={(v) => set(`mgh.${k}`, v)} />
+      </div>
+    ))}
+    <div className="mt-3 text-sm bg-teal-50 text-teal-800 rounded-md px-3 py-2 inline-block">
+      Tổng điểm MGH-HPS: <span className="font-medium">{tong === null ? "— (điền đủ 7 câu)" : `${tong}/28`}</span>
+      {tong !== null && <span className="ml-2 px-2 py-0.5 rounded-full bg-white text-teal-800 text-xs">{mucDoMgh(tong)} (≤7 nhẹ · 8-15 trung bình · ≥16 nặng)</span>}
+    </div>
+  </div>;
+}
+
+function NewTTMForm({ initial, onDraftChange, onSave, onCancel, uploadImage, fetchSurvey }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const bmi = d.chieuCao && d.canNang ? fmt(d.canNang / ((d.chieuCao / 100) ** 2)) : "";
+  const qfTargets = tab === 1 ? [...tsTargets(TIENSU_BANTHAN_TTM, "tienSuBanThan", YESNO2), ...tsTargets(TIENSU_GIADINH_TTM, "tienSuGiaDinh", YESNO2)]
+    : tab === 2 ? [...tsTargets(NHAN_THUC_TTM, "nhanThuc", YESNO2), ...tsTargets(HANH_VI_SAU_NHO_TTM, "hanhViSauNho", YESNO2), ...tsTargets(BFRB_TTM, "bfrb", YESNO2)]
+    : tab === 5 ? dermTargets(DERMOSCOPY_TTM) : [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
+  const applySurvey = (r) => setD((prev) => applySurveyToData(prev, r));
+
+  return <div>
+    {fetchSurvey && <SurveySyncBar benh="ttm" data={d} fetchSurvey={fetchSurvey} onApply={applySurvey} />}
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_TTM_NEW.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, tabKeys(NEW_TTM_CASE_SECTIONS, s), s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
+    </div>
+
+    {tab === 0 && <div className="grid sm:grid-cols-2 gap-x-6">
+      <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+      <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+      <Field label="Nghề nghiệp"><RadioGroup options={NGHE_NGHIEP_TTM} value={d.ngheNghiep} onChange={(v) => set("ngheNghiep", v)} /></Field>
+      <Field label="Trình độ học vấn"><RadioGroup options={TRINH_DO_TTM} value={d.trinhDo} onChange={(v) => set("trinhDo", v)} /></Field>
+      <Field label="Chiều cao (cm)"><TextInput type="number" value={d.chieuCao} onChange={(v) => set("chieuCao", v)} /></Field>
+      <Field label="Cân nặng (kg)"><TextInput type="number" value={d.canNang} onChange={(v) => set("canNang", v)} /></Field>
+      <Field label="BMI (tự tính)"><div className="text-sm text-gray-500 py-1.5">{bmi || "—"}</div></Field>
+    </div>}
+
+    {tab === 1 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Tuổi khởi phát"><TextInput value={d.tuoiKhoiPhat} onChange={(v) => set("tuoiKhoiPhat", v)} /></Field>
+        <Field label="Thời gian mắc bệnh"><TextInput value={d.thoiGianMacBenh} onChange={(v) => set("thoiGianMacBenh", v)} placeholder="VD: 24 tháng" /></Field>
+      </div>
+      <Field label="Hoàn cảnh khởi phát">
+        <RadioGroup options={HOAN_CANH_KHOI_PHAT_TTM} value={d.hoanCanhKhoiPhat} onChange={(v) => set("hoanCanhKhoiPhat", v)} />
+        {d.hoanCanhKhoiPhat === "Khác" && <div className="mt-1"><TextInput value={d.hoanCanhKhoiPhatKhac} onChange={(v) => set("hoanCanhKhoiPhatKhac", v)} /></div>}
+      </Field>
+      <Field label="BN tự nhổ tóc hay người khác nhổ"><RadioGroup options={AI_NHO_TOC} value={d.aiNhoToc} onChange={(v) => set("aiNhoToc", v)} /></Field>
+      <Field label="Điều trị trước đây"><CheckboxGroup options={DIEU_TRI_TRUOC_TTM} value={d.dieuTriTruoc} onChange={(v) => set("dieuTriTruoc", v)} /></Field>
+      <Field label="Đáp ứng với điều trị trước"><RadioGroup options={DAP_UNG_TRUOC_TTM} value={d.dapUngDieuTriTruoc} onChange={(v) => set("dapUngDieuTriTruoc", v)} /></Field>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử bản thân</div>
+        <YesNoTable rows={TIENSU_BANTHAN_TTM} data={d.tienSuBanThan} onChange={(r, f, v) => set(`tienSuBanThan.${r}.${f}`, v)} /></div>
+      <Field label="Sử dụng biện pháp tránh thai (nữ)"><RadioGroup options={TRANH_THAI_TTM} value={d.tranhThai} onChange={(v) => set("tranhThai", v)} /></Field>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Tiền sử gia đình</div>
+        <YesNoTable rows={TIENSU_GIADINH_TTM} data={d.tienSuGiaDinh} onChange={(r, f, v) => set(`tienSuGiaDinh.${r}.${f}`, v)} /></div>
+    </div>}
+
+    {tab === 2 && <div>
+      <div className="text-sm font-medium text-gray-700 mb-1">Nhận thức và kiểu nhổ tóc</div>
+      <YesNoTable rows={NHAN_THUC_TTM} data={d.nhanThuc} onChange={(r, f, v) => set(`nhanThuc.${r}.${f}`, v)} />
+      <Field label="Tình huống hay xảy ra nhổ tóc nhất">
+        <CheckboxGroup options={TRIGGER_TTM} value={d.tinhHuongKichHoat} onChange={(v) => set("tinhHuongKichHoat", v)} />
+        {(d.tinhHuongKichHoat || []).includes("Khác") && <div className="mt-1"><TextInput value={d.tinhHuongKhac} onChange={(v) => set("tinhHuongKhac", v)} /></div>}
+      </Field>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Tần suất nhổ tóc"><RadioGroup options={TAN_SUAT_TTM} value={d.tanSuatNhoToc} onChange={(v) => set("tanSuatNhoToc", v)} /></Field>
+        <Field label="Thời điểm trong ngày"><CheckboxGroup options={THOI_DIEM_TTM} value={d.thoiDiemTrongNgay} onChange={(v) => set("thoiDiemTrongNgay", v)} /></Field>
+      </div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Hành vi sau khi nhổ tóc</div>
+        <YesNoTable rows={HANH_VI_SAU_NHO_TTM} data={d.hanhViSauNho} onChange={(r, f, v) => set(`hanhViSauNho.${r}.${f}`, v)} /></div>
+      <div className="mt-4"><div className="text-sm font-medium text-gray-700 mb-1">Hành vi lặp lại khác (BFRBs)</div>
+        <YesNoTable rows={BFRB_TTM} data={d.bfrb} onChange={(r, f, v) => set(`bfrb.${r}.${f}`, v)} /></div>
+    </div>}
+
+    {tab === 3 && <MghTable d={d} set={set} />}
+
+    {tab === 4 && <div>
+      <Field label="Vị trí da đầu"><CheckboxGroup options={VI_TRI_DA_DAU_TTM} value={d.viTriDaDau} onChange={(v) => set("viTriDaDau", v)} /></Field>
+      <Field label="Vùng lông ngoài da đầu"><CheckboxGroup options={VI_TRI_NGOAI_TTM} value={d.viTriNgoaiDaDau} onChange={(v) => set("viTriNgoaiDaDau", v)} /></Field>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="Diện tích vùng rụng (% da đầu)"><TextInput type="number" value={d.dienTichPhanTram} onChange={(v) => set("dienTichPhanTram", v)} /></Field>
+        <Field label="Mảng lớn nhất — dài (cm)"><TextInput type="number" value={d.mangDai} onChange={(v) => set("mangDai", v)} /></Field>
+        <Field label="Mảng lớn nhất — rộng (cm)"><TextInput type="number" value={d.mangRong} onChange={(v) => set("mangRong", v)} /></Field>
+      </div>
+      <Field label="Test kéo tóc"><RadioGroup options={["Dương tính", "Âm tính"]} value={d.pullTest} onChange={(v) => set("pullTest", v)} /></Field>
+      <Field label="Hình thái tổn thương"><CheckboxGroup options={HINH_THAI_TTM} value={d.hinhThaiTonThuong} onChange={(v) => set("hinhThaiTonThuong", v)} /></Field>
+      <Field label="Dấu hiệu kèm theo"><CheckboxGroup options={DAU_HIEU_KEM_TTM} value={d.dauHieuKemTheo} onChange={(v) => set("dauHieuKemTheo", v)} /></Field>
+    </div>}
+
+    {tab === 5 && <div>
+      <div className="text-sm font-medium text-gray-700 mb-1">Dermoscopy — phân tích tóc và da đầu</div>
+      {DERMOSCOPY_TTM.map((item) => (
+        <div key={item} className="flex items-center justify-between py-1 border-b border-gray-100 text-sm">
+          <span>{item}</span><RadioGroup options={["Có", "Không"]} value={getPath(d, `dermoscopy.${item}`)} onChange={(v) => set(`dermoscopy.${item}`, v)} />
+        </div>
+      ))}
+    </div>}
+
+    {tab === 6 && <div>
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        {LABS_TTM.map(([k, l, u]) => <Field key={k} label={`${l}${u ? ` (${u})` : ""}`}><TextInput value={getPath(d, `labs.${k}`)} onChange={(v) => set(`labs.${k}`, v)} /></Field>)}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 mt-2">
+        <Field label="Vi nấm soi tươi">
+          <RadioGroup options={["Âm tính", "Dương tính"]} value={d.viNam} onChange={(v) => set("viNam", v)} />
+          {d.viNam === "Dương tính" && <div className="mt-1"><TextInput value={d.viNamLoai} onChange={(v) => set("viNamLoai", v)} placeholder="Loài nấm" /></div>}
+        </Field>
+        <Field label="Siêu âm bụng (nghi bã tóc – trichobezoar)"><TextInput value={d.sieuAmBung} onChange={(v) => set("sieuAmBung", v)} /></Field>
+        <Field label="XN khác"><TextInput value={d.xnKhac} onChange={(v) => set("xnKhac", v)} /></Field>
+      </div>
+    </div>}
+
+    {tab === 7 && <div>
+      <div className="text-sm font-medium text-gray-700 mb-1">Tiêu chuẩn DSM-5 (phải đạt cả 5 tiêu chuẩn)</div>
+      {DSM5_TTM.map((item) => (
+        <div key={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1.5 border-b border-gray-100 text-sm">
+          <span className="flex-1">{item}</span>
+          <RadioGroup options={["Đạt", "Không đạt"]} value={getPath(d, `dsm5.${item}`)} onChange={(v) => set(`dsm5.${item}`, v)} />
+        </div>
+      ))}
+      {(() => {
+        const vals = DSM5_TTM.map((x) => getPath(d, `dsm5.${x}`));
+        const daDien = vals.every((v) => isFilled(v));
+        const duTieuChuan = daDien && vals.every((v) => v === "Đạt");
+        return daDien ? <div className={`mt-2 text-sm rounded-md px-3 py-2 inline-block ${duTieuChuan ? "bg-teal-50 text-teal-800" : "bg-amber-50 text-amber-700"}`}>
+          Tự đối chiếu: {duTieuChuan ? "ĐỦ 5/5 tiêu chuẩn DSM-5" : `Mới đạt ${vals.filter((v) => v === "Đạt").length}/5 tiêu chuẩn`}
+        </div> : null;
+      })()}
+      <Field label="Kết luận chẩn đoán">
+        <RadioGroup options={["Đủ tiêu chuẩn tật nhổ tóc", "Chưa đủ — chẩn đoán khác"]} value={d.ketLuanChanDoan} onChange={(v) => set("ketLuanChanDoan", v)} />
+        {d.ketLuanChanDoan === "Chưa đủ — chẩn đoán khác" && <div className="mt-1"><TextInput value={d.chanDoanKhac} onChange={(v) => set("chanDoanKhac", v)} /></div>}
+      </Field>
+    </div>}
+
+    {tab === 8 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 9 && <div>
+      <div className="text-sm font-medium text-gray-700 mb-1">Điều trị hành vi (HRT — Habit Reversal Training)</div>
+      <YesNoTable rows={HRT_TTM} data={d.hrt} onChange={(r, f, v) => set(`hrt.${r}.${f}`, v)} />
+      <div className="mt-4">
+        <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+          loaiOptions={THUOC_UONG_TTM} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+          khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+          cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
+        <AGATreatmentSection label="Thuốc bôi / xịt" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+          loaiOptions={THUOC_BOI_TTM} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+          khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+          cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
+        <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+          loaiOptions={THU_THUAT_TTM} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+          khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+          cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
+      </div>
+      <Field label="Hẹn khám lại"><TextInput type="date" value={d.henKham} onChange={(v) => set("henKham", v)} /></Field>
+    </div>}
+
+    {tab === 10 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+    {tab === 11 && <SurveyTab d={d} />}
+
+    {tab < SECTIONS_TTM_NEW.length - 1 && <div className="flex justify-end mt-4">
+      <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_TTM_NEW[tab + 1]} →</button>
+    </div>}
+    <MissingSummary data={d} sectionMap={NEW_TTM_CASE_SECTIONS} />
+    <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
+      <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu bệnh án</button>
+      <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
+    </div>
+  </div>;
+}
+
+function TTMFollowUpForm({ initial, onDraftChange, saltT0, onSave, onCancel, uploadImage }) {
+  const [d, setD] = useState(initial || {});
+  const [tab, setTab] = useState(0);
+  const set = (path, val) => setD((prev) => setPath(prev, path, val));
+  const doSave = () => onSave({ ...d, dieuTri: buildTreatmentSummary(d) });
+  useCtrlSSave(doSave);
+  useEffect(() => { if (onDraftChange) onDraftChange({ ...d, dieuTri: buildTreatmentSummary(d) }); }, [d]);
+  const qfTargets = [];
+  const quickFill = (v) => { const r = applyQuickFill(d, qfTargets, v); setD(r.next); return r.n; };
+  const tong = calcMgh(d);
+
+  return <div>
+    <div className="flex flex-wrap gap-1 mb-4 border-b border-gray-200 pb-2">
+      {SECTIONS_TTM_FU.map((s, i) => (
+        <button key={s} onClick={() => setTab(i)}
+          className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 ${tab === i ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          {s}<span className={`w-1.5 h-1.5 rounded-full ${sectionFilled(d, FOLLOWUP_TTM_SECTIONS[s], s) ? "bg-emerald-400" : "bg-gray-300"}`}></span>
+        </button>
+      ))}
+      <QuickFillButton targets={qfTargets} onApply={quickFill} />
+    </div>
+
+    {tab === 0 && <div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày khám"><TextInput type="date" value={d.ngayKham} onChange={(v) => set("ngayKham", v)} /></Field>
+        <Field label="Bác sĩ khám"><RadioGroup options={BAC_SI} value={d.bacSiKham} onChange={(v) => set("bacSiKham", v)} /></Field>
+      </div>
+      {saltT0 !== null && saltT0 !== undefined && <div className="text-sm bg-teal-50 text-teal-800 rounded-md px-3 py-2 inline-block mb-2">
+        Điểm MGH-HPS lần đầu (T0): <span className="font-medium">{saltT0}/28</span>
+        {tong !== null && <span className="ml-2">→ hiện tại {tong}/28</span>}
+      </div>}
+      <div className="grid sm:grid-cols-3 gap-x-4">
+        <Field label="So với lần trước"><RadioGroup options={["Cải thiện", "Không đổi", "Nặng hơn"]} value={d.soVoiLanTruoc} onChange={(v) => set("soVoiLanTruoc", v)} /></Field>
+        <Field label="BN có nhổ tóc giữa 2 lần khám"><RadioGroup options={["Không", "Ít hơn trước", "Tương đương", "Nhiều hơn trước"]} value={d.nhoTocGiua2Lan} onChange={(v) => set("nhoTocGiua2Lan", v)} /></Field>
+        <Field label="BN tuân thủ điều trị"><RadioGroup options={["Tốt", "Một phần", "Không tuân thủ"]} value={d.tuanThuDieuTri} onChange={(v) => set("tuanThuDieuTri", v)} /></Field>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Diện tích vùng rụng hiện tại (%)"><TextInput type="number" value={d.dienTichPhanTram} onChange={(v) => set("dienTichPhanTram", v)} /></Field>
+        <Field label="So lần trước"><RadioGroup options={["Tốt hơn", "Không đổi", "Rộng hơn"]} value={d.dienTichSoLanTruoc} onChange={(v) => set("dienTichSoLanTruoc", v)} /></Field>
+      </div>
+      <Field label="Tóc mọc lại"><RadioGroup options={["Có — đều", "Có — thưa", "Không"]} value={d.tocMocLai} onChange={(v) => set("tocMocLai", v)} /></Field>
+      <Field label="Mảng rụng mới">
+        <RadioGroup options={["Không", "Có"]} value={d.mangRungMoi} onChange={(v) => set("mangRungMoi", v)} />
+        {d.mangRungMoi === "Có" && <div className="mt-1"><TextInput value={d.mangRungMoiViTri} onChange={(v) => set("mangRungMoiViTri", v)} placeholder="Vị trí" /></div>}
+      </Field>
+      <Field label="Dấu hiệu RTS (sẹo / teo / mất lỗ nang)">
+        <RadioGroup options={["Không", "Có"]} value={d.dauHieuRTS} onChange={(v) => set("dauHieuRTS", v)} />
+        {d.dauHieuRTS === "Có" && <div className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1 mt-1">Cân nhắc chuyển theo dõi rụng tóc sẹo (SA).</div>}
+      </Field>
+    </div>}
+
+    {tab === 1 && <MghTable d={d} set={set} />}
+
+    {tab === 2 && <div>
+      <Field label="Dấu hiệu traumatic (flame, tulip, hook, broken hairs)"><RadioGroup options={["Còn", "Giảm", "Mất"]} value={d.dauHieuTraumatic} onChange={(v) => set("dauHieuTraumatic", v)} /></Field>
+      <Field label="Lỗ nang"><RadioGroup options={["Bảo tồn", "Bắt đầu xơ hóa"]} value={d.loNang} onChange={(v) => set("loNang", v)} /></Field>
+      <Field label="Tóc mọc lại dưới kính"><RadioGroup options={["Có — vellus", "Có — terminal", "Không"]} value={d.tocMocLaiDuoiKinh} onChange={(v) => set("tocMocLaiDuoiKinh", v)} /></Field>
+      <Field label="Kết luận"><TextArea value={d.ketLuanDermoscopy} onChange={(v) => set("ketLuanDermoscopy", v)} rows={2} /></Field>
+    </div>}
+
+    {tab === 3 && <div>
+      <Field label="Tác dụng phụ thuốc">
+        <RadioGroup options={["Không", "Có"]} value={d.tacDungPhuStatus} onChange={(v) => set("tacDungPhuStatus", v)} />
+        {d.tacDungPhuStatus === "Có" && <div className="mt-1"><TextArea value={d.tacDungPhuChiTiet} onChange={(v) => set("tacDungPhuChiTiet", v)} rows={2} /></div>}
+      </Field>
+      <AGATreatmentSection label="Thuốc uống" coValue={d.thuocUongCo} onCoChange={(v) => set("thuocUongCo", v)}
+        loaiOptions={THUOC_UONG_TTM} loaiValue={d.thuocUongLoai} onLoaiChange={(v) => set("thuocUongLoai", v)}
+        khacValue={d.thuocUongKhac} onKhacChange={(v) => set("thuocUongKhac", v)}
+        cuTheValue={d.thuocUongCuThe} onCuTheChange={(v) => set("thuocUongCuThe", v)} />
+      <AGATreatmentSection label="Thuốc bôi / xịt" coValue={d.thuocBoiCo} onCoChange={(v) => set("thuocBoiCo", v)}
+        loaiOptions={THUOC_BOI_TTM} loaiValue={d.thuocBoiLoai} onLoaiChange={(v) => set("thuocBoiLoai", v)}
+        khacValue={d.thuocBoiKhac} onKhacChange={(v) => set("thuocBoiKhac", v)}
+        cuTheValue={d.thuocBoiCuThe} onCuTheChange={(v) => set("thuocBoiCuThe", v)} />
+      <AGATreatmentSection label="Thủ thuật" coValue={d.thuThuatCo} onCoChange={(v) => set("thuThuatCo", v)}
+        loaiOptions={THU_THUAT_TTM} loaiValue={d.thuThuatLoai} onLoaiChange={(v) => set("thuThuatLoai", v)}
+        khacValue={d.thuThuatKhac} onKhacChange={(v) => set("thuThuatKhac", v)}
+        cuTheValue={d.thuThuatCuThe} onCuTheChange={(v) => set("thuThuatCuThe", v)} />
+    </div>}
+
+    {tab === 4 && <div>
+      <Field label="Chỉ định giải phẫu bệnh"><RadioGroup options={["Không", "Có"]} value={d.gpbCo} onChange={(v) => set("gpbCo", v)} /></Field>
+      {d.gpbCo === "Có" && <div className="grid sm:grid-cols-2 gap-x-6">
+        <Field label="Ngày thực hiện"><TextInput type="date" value={d.gpbNgayThucHien} onChange={(v) => set("gpbNgayThucHien", v)} /></Field>
+        <Field label="Kết quả"><TextArea value={d.gpbKetQua} onChange={(v) => set("gpbKetQua", v)} rows={2} /></Field>
+      </div>}
+      {gpbStatus(d) && <div className="mt-1"><GpbBadge data={d} /></div>}
+    </div>}
+
+    {tab === 5 && <ImageUploader images={d.anh} onChange={(v) => set("anh", v)} uploadImage={uploadImage} />}
+
+    {tab < SECTIONS_TTM_FU.length - 1 && <div className="flex justify-end mt-4">
+      <button onClick={() => setTab(tab + 1)} className="px-3 py-1.5 bg-teal-50 text-teal-700 text-sm rounded-md hover:bg-teal-100">Tiếp theo: {SECTIONS_TTM_FU[tab + 1]} →</button>
+    </div>}
+    <MissingSummary data={d} sectionMap={FOLLOWUP_TTM_SECTIONS} />
     <div className="flex gap-2 mt-6 pt-4 border-t border-gray-200">
       <button onClick={doSave} className="px-4 py-2 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700">Lưu lần tái khám</button>
       <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200">Hủy</button>
@@ -2288,6 +3183,14 @@ function App() {
         const c = await api(`/cases/${encodeURIComponent(pp.maBN)}/nonscar`);
         setAaCase(mapCaseFromApi(c)); setCurrentDisease("nonscar"); setView("timeline"); return;
       } catch (e) {}
+      try {
+        const c = await api(`/cases/${encodeURIComponent(pp.maBN)}/sa`);
+        setAaCase(mapCaseFromApi(c)); setCurrentDisease("sa"); setView("timeline"); return;
+      } catch (e) {}
+      try {
+        const c = await api(`/cases/${encodeURIComponent(pp.maBN)}/ttm`);
+        setAaCase(mapCaseFromApi(c)); setCurrentDisease("ttm"); setView("timeline"); return;
+      } catch (e) {}
       setAaCase(null); setView("chooseDisease");
     } catch (e) { setPatient({ maBN: typed }); setAaCase(null); setHisMsg(null); setView("newPatient"); lookupHIS(typed); }
   }
@@ -2412,6 +3315,29 @@ function App() {
     thuThuatCo: "6_Dieutri", thuThuatLoai: "6_Dieutri", thuThuatKhac: "6_Dieutri",
     anh: "7_Anh",
     gpbCo: "8_GPB", gpbNgayThucHien: "8_GPB", gpbKetQua: "8_GPB",
+    // Rụng tóc sẹo (SA)
+    icd10: "0_HC", lppThe: "0_HC", l668Loai: "0_HC", l668Khac: "0_HC", nahrs: "0_HC", chanDoanPhanBiet: "0_HC",
+    viTriKhoiPhat: "1_BSTS", tienTrienTonThuong: "1_BSTS", thoiQuenChamSocToc: "1_BSTS", dieuTriTruocChiTiet: "1_BSTS",
+    ranhGioiTonThuong: "2_Kham", dienTichPhanTram: "2_Kham", luiChanToc: "2_Kham", mucLuiCm: "2_Kham",
+    viTriLui: "2_Kham", tonThuongNgoaiDaDau: "2_Kham", thayDoiSoVoiTruoc: "2_Kham",
+    lppai: "3_ThangDiem",
+    viTriKhaoSat: "4_Dermoscopy", dermoscopyTK: "4_Dermoscopy", ketLuanDermoscopy: "4_Dermoscopy",
+    soiNam: "5_CLS", soiNamLoai: "5_CLS", cayViKhuan: "5_CLS", pcrDemodex: "5_CLS",
+    gpbViTri: "8_GPB", mbh: "8_GPB", nhuomDacBiet: "8_GPB", ketLuanMbh: "8_GPB",
+    thuocDangDung: "6_Dieutri", tacDungPhu: "6_Dieutri",
+    // Tật nhổ tóc (TTM)
+    hoanCanhKhoiPhat: "1_BSTS", hoanCanhKhoiPhatKhac: "1_BSTS", aiNhoToc: "1_BSTS", dieuTriTruoc: "1_BSTS",
+    dapUngDieuTriTruoc: "1_BSTS", tranhThai: "1_BSTS",
+    nhanThuc: "1b_HanhVi", tinhHuongKichHoat: "1b_HanhVi", tinhHuongKhac: "1b_HanhVi",
+    tanSuatNhoToc: "1b_HanhVi", thoiDiemTrongNgay: "1b_HanhVi", hanhViSauNho: "1b_HanhVi", bfrb: "1b_HanhVi",
+    mgh: "3_ThangDiem",
+    viTriDaDau: "2_Kham", viTriNgoaiDaDau: "2_Kham", hinhThaiTonThuong: "2_Kham", dauHieuKemTheo: "2_Kham",
+    dienTichSoLanTruoc: "2_Kham", tocMocLai: "2_Kham", mangRungMoi: "2_Kham", mangRungMoiViTri: "2_Kham",
+    dauHieuRTS: "2_Kham", soVoiLanTruoc: "2_Kham", nhoTocGiua2Lan: "2_Kham", tuanThuDieuTri: "2_Kham",
+    dauHieuTraumatic: "4_Dermoscopy", loNang: "4_Dermoscopy", tocMocLaiDuoiKinh: "4_Dermoscopy",
+    viNam: "5_CLS", viNamLoai: "5_CLS", sieuAmBung: "5_CLS",
+    dsm5: "9_ChanDoan", ketLuanChanDoan: "9_ChanDoan", chanDoanKhac: "9_ChanDoan",
+    hrt: "6_Dieutri", tacDungPhuChiTiet: "6_Dieutri",
     // phiếu khảo sát bệnh nhân tự điền (đồng bộ từ hệ thống bệnh viện)
     khaoSat: "9_KhaoSat", khaoSatNgay: "9_KhaoSat", khaoSatDlqiTong: "9_KhaoSat",
     // trường riêng của AGA / Rụng tóc không sẹo
@@ -2432,7 +3358,9 @@ function App() {
     cumulativeThickness: "4_Dermoscopy", dermoscopyKhac: "4_Dermoscopy",
     vungTran: "4_Dermoscopy", vungDinh: "4_Dermoscopy", vungCham: "4_Dermoscopy",
   };
-  const CONTAINER_ABBR = { vung: null, dermoscopy: null, labs: null, tdkm: "tdkm", tienSuBanThan: "tsbt", tienSuGiaDinh: "tsgd", khaoSat: null };
+  const CONTAINER_ABBR = { vung: null, dermoscopy: null, labs: null, tdkm: "tdkm", tienSuBanThan: "tsbt", tienSuGiaDinh: "tsgd", khaoSat: null,
+  lppai: "lppai", mgh: "mgh", mbh: "mbh", nhanThuc: "nt", hanhViSauNho: "hvsn", bfrb: "bfrb",
+  dsm5: "dsm5", hrt: "hrt", thoiQuenChamSocToc: "tqct", tacDungPhu: "tdp", dermoscopyTK: null };
   function stripDiacritics(s) {
     return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
   }
@@ -2599,7 +3527,7 @@ function App() {
           </div>
           <Field label="Loại bệnh">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {[["", "Tất cả"], ["AA", "AA"], ["AGA", "AGA"], ["NONSCAR", "NONSCAR"]].map(([val, label]) => (
+              {[["", "Tất cả"], ["AA", "AA"], ["AGA", "AGA"], ["NONSCAR", "NS"], ["SA", "SA"], ["TTM", "TTM"]].map(([val, label]) => (
                 <label key={label} className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
                   <input type="radio" checked={searchFilters.benh === val} onChange={() => setSearchFilters({ ...searchFilters, benh: val })} />{label}
                 </label>
@@ -2702,7 +3630,11 @@ function App() {
           · Mã lưu trữ <b>{aaCase.maLuuTru}</b></div>
         <span className="flex items-center"><ImageBadge data={aaCase.benhAnMoi} /><GpbBadge data={aaCase.benhAnMoi} /><StatusBadge done={aaCase.daDienDuLieu} /></span>
       </div>
-      {currentDisease === "aga"
+      {currentDisease === "sa"
+        ? <NewSAForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
+        : currentDisease === "ttm"
+        ? <NewTTMForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
+        : currentDisease === "aga"
         ? <NewAGAForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} patientGioiTinh={patient.gioiTinh} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
         : currentDisease === "nonscar"
         ? <NewNonScarForm initial={aaCase.benhAnMoi} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveNewCase} onCancel={() => setView(aaCase.daDienDuLieu ? "timeline" : "home")} uploadImage={uploadImage} fetchSurvey={loadSurvey} />
@@ -2739,6 +3671,10 @@ function App() {
                   ? `Hamilton-Norwood ${aaCase.benhAnMoi?.hamiltonNorwood || "—"} · Sinclair ${aaCase.benhAnMoi?.sinclairScale || "—"}`
                   : currentDisease === "nonscar"
                   ? `Kiểu rụng tóc: ${aaCase.benhAnMoi?.kieuRungToc || "—"}`
+                  : currentDisease === "sa"
+                  ? `LPPAI ${calcLppai(aaCase.benhAnMoi || {}) ?? "—"} · ${aaCase.benhAnMoi?.icd10 || "chưa chọn ICD-10"}`
+                  : currentDisease === "ttm"
+                  ? `MGH-HPS ${calcMgh(aaCase.benhAnMoi || {}) ?? "—"}/28 · ${mucDoMgh(calcMgh(aaCase.benhAnMoi || {})) || "—"}`
                   : `SALT ${fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · ${aaCase.benhAnMoi?.theLamSang || "—"}`}
               </div>
             </div>
@@ -2751,6 +3687,10 @@ function App() {
                   ? `Hamilton-Norwood ${tk.hamiltonNorwood || "—"} · Sinclair ${tk.sinclairScale || "—"}`
                   : currentDisease === "nonscar"
                   ? `Mức độ so với trước: ${tk.mucDoSoVoiTruoc || "—"}`
+                  : currentDisease === "sa"
+                  ? `LPPAI ${calcLppai(tk) ?? "—"}${tk.thayDoiSoVoiTruoc ? ` · ${tk.thayDoiSoVoiTruoc} so lần trước` : ""}`
+                  : currentDisease === "ttm"
+                  ? `MGH-HPS ${calcMgh(tk) ?? "—"}/28${tk.soVoiLanTruoc ? ` · ${tk.soVoiLanTruoc}` : ""}`
                   : `SALT ${fmt(s)}${tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}`}
               </div>
             </div>
@@ -2772,7 +3712,11 @@ function App() {
           {user.can_export && <button className="ml-2 px-2.5 py-1 text-xs bg-red-50 text-red-600 rounded-md hover:bg-red-100" onClick={() => { if (window.confirm(`Xoá lần tái khám ${editIdx + 1}? Không thể hoàn tác.`)) deleteFollowupAt(editIdx); }}>Xoá lần tái khám này</button>}
         </span>
       </div>
-      {currentDisease === "aga"
+      {currentDisease === "sa"
+        ? <SAFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+        : currentDisease === "ttm"
+        ? <TTMFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} saltT0={calcMgh(aaCase.benhAnMoi || {})} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
+        : currentDisease === "aga"
         ? <AGAFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} patientGioiTinh={patient.gioiTinh} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
         : currentDisease === "nonscar"
         ? <NonScarFollowUpForm initial={aaCase.taiKhams[editIdx]} onDraftChange={(v) => { draftRef.current = v; }} onSave={saveFollowUp} onCancel={() => { setEditIdx(null); setView("timeline"); }} uploadImage={uploadImage} />
