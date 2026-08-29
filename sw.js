@@ -1,4 +1,4 @@
-const CACHE_NAME = "aa-app-shell-v1";
+const CACHE_NAME = "aa-app-shell-v2";
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -18,7 +18,7 @@ self.addEventListener("activate", (event) => {
 });
 
 // Chỉ lấy từ cache khi ĐANG MỞ TRANG (navigate) và không có mạng.
-// Mọi request khác (gọi API backend, CDN React/Babel...) luôn ưu tiên mạng thật,
+// Mọi request khác (gọi API backend, CDN thư viện xuất Excel...) luôn ưu tiên mạng thật,
 // để dữ liệu bệnh nhân không bao giờ bị lấy nhầm từ bản cũ trong cache.
 self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
