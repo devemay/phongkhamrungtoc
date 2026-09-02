@@ -512,27 +512,48 @@ function mapPatientFromApi(p) {
 }
 const BAC_SI = ["BS Hà Vinh", "BS Tuỳ", "BS Xuân", "BS Tráng", "BS Trang", "BS Ngọc Anh"];
 const MUC_DO_LEVELS = ["Không rụng tóc", "Nhẹ/giới hạn", "Trung bình", "Nặng", "Rất nặng"];
+// Khoá kỹ thuật (key) dùng trong địa chỉ API, KHÁC với ký hiệu hiển thị (k).
+// Chỉ rụng tóc không sẹo là khác nhau: khoá vẫn là "nonscar" để không phá dữ liệu và
+// các đường dẫn đã có, còn ký hiệu hiển thị đổi thành "NSA".
 const DISEASES = [{
   k: "AA",
+  key: "aa",
   l: "Rụng tóc mảng (AA)",
   active: true
 }, {
   k: "AGA",
+  key: "aga",
   l: "Rụng tóc Androgen (AGA)",
   active: true
 }, {
-  k: "NONSCAR",
-  l: "Rụng tóc không sẹo",
+  k: "NSA",
+  key: "nonscar",
+  l: "Rụng tóc không sẹo (NSA)",
   active: true
 }, {
   k: "SA",
+  key: "sa",
   l: "Rụng tóc sẹo (SA)",
   active: true
 }, {
   k: "TTM",
+  key: "ttm",
   l: "Tật nhổ tóc (TTM)",
   active: true
 }];
+const KY_HIEU_BENH = {
+  aa: "AA",
+  aga: "AGA",
+  nonscar: "NSA",
+  sa: "SA",
+  ttm: "TTM"
+};
+// Đổi khoá kỹ thuật thành ký hiệu hiển thị. Nhận cả chuỗi cũ "NONSCAR" để dữ liệu
+// hoặc bản ghi cũ vẫn hiện đúng.
+function kyHieu(khoa) {
+  const k = String(khoa || "").toLowerCase();
+  return KY_HIEU_BENH[k] || (k === "ns" ? "NSA" : String(khoa || "").toUpperCase());
+}
 const SALT_VUNG = [{
   k: "dinh",
   l: "Đỉnh (Vertex)",
@@ -764,7 +785,8 @@ const NEW_CASE_SECTIONS = {
   "Cận lâm sàng": ["labs", "treponema", "viNam", "sieuAmTuyenGiap", "il15", "il13", "ifnG", "ifnGMo", "il13Mo", "ngayLayMau"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const FOLLOWUP_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "tocToMoc", "mucDoSoVoiTruoc", "tacDungPhuStatus"],
@@ -772,7 +794,8 @@ const FOLLOWUP_SECTIONS = {
   "Dermoscopy": ["dermoscopy", "vas", "tdkm"],
   "Cận lâm sàng & điều trị": ["xnStatus", "xnKetQua", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
   "Giải phẫu bệnh": ["gpbCo"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const NEW_AGA_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "luuHuyetTuong", "luuHuyetThanh"],
@@ -783,7 +806,8 @@ const NEW_AGA_CASE_SECTIONS = {
   "Cận lâm sàng": ["labs", "sieuAmOBung", "sieuAmTuyenGiap", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const FOLLOWUP_AGA_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "mucDoSoVoiTruoc"],
@@ -791,7 +815,8 @@ const FOLLOWUP_AGA_SECTIONS = {
   "Tác dụng phụ & Xét nghiệm": ["tacDungPhuStatus", "xnStatus"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị": ["thuocUongCo", "thuocBoiCo", "thuThuatCo"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const NEW_NONSCAR_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "luuHuyetTuong", "luuHuyetThanh"],
@@ -801,13 +826,15 @@ const NEW_NONSCAR_CASE_SECTIONS = {
   "Cận lâm sàng": ["labs", "testNhanhGiangMai", "sieuAmTuyenGiap", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const FOLLOWUP_NONSCAR_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "mucDoSoVoiTruoc"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Xét nghiệm & Điều trị": ["xnStatus", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 
 // ---------- nạp thư viện khi cần dùng (lazy load) ----------
@@ -1445,21 +1472,82 @@ function ImageBadge({
     className: "px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs mr-1.5"
   }, "Ảnh");
 }
-// Ký hiệu màu đặt trước mỗi bản ghi để nhận biết nhanh thuộc bệnh nào — AA đỏ, AGA xanh, NONSCAR (NS) vàng
+// Ký hiệu màu đặt trước mỗi bản ghi để nhận biết nhanh thuộc bệnh nào — AA đỏ, AGA xanh, NSA vàng
 const DISEASE_TAG_STYLE = {
   AA: "bg-red-100 text-red-700",
   AGA: "bg-blue-100 text-blue-700",
-  NONSCAR: "bg-amber-100 text-amber-800",
+  NSA: "bg-amber-100 text-amber-800",
   SA: "bg-purple-100 text-purple-700",
   TTM: "bg-emerald-100 text-emerald-700"
 };
+// Hiển thị ký hiệu bệnh chính kèm các bệnh đồng mắc (nếu có).
+function DiseaseTags({
+  benh,
+  dongMac
+}) {
+  const chinh = kyHieu(benh);
+  const them = String(dongMac || "").split(",").map(x => x.trim()).filter(Boolean).map(kyHieu).filter(k => k !== chinh);
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DiseaseTag, {
+    benh: chinh
+  }), them.map(k => /*#__PURE__*/React.createElement(DiseaseTag, {
+    key: k,
+    benh: k
+  })));
+}
+
+// ---------- Tình trạng đồng mắc ----------
+// Lưu ở cấp BỆNH ÁN chứ không phải từng lần khám: sửa ở phiếu nào cũng áp dụng cho
+// toàn bộ các lần khám của bệnh nhân đó (backend đồng bộ lại vào cột dong_mac).
+const BENH_DONG_MAC = [["AA", "Rụng tóc mảng"], ["AGA", "Rụng tóc Androgen"], ["NSA", "Rụng tóc không sẹo"], ["SA", "Rụng tóc sẹo"], ["TTM", "Tật nhổ tóc"]];
+function DongMacTab({
+  d,
+  set,
+  benh
+}) {
+  const chon = Array.isArray(d.dongMacBenh) ? d.dongMacBenh : [];
+  const bat = k => set("dongMacBenh", chon.includes(k) ? chon.filter(x => x !== k) : [...chon, k]);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Field, {
+    label: "Có thể rụng tóc đồng mắc khác không?"
+  }, /*#__PURE__*/React.createElement(RadioGroup, {
+    options: ["Không", "Có"],
+    value: d.dongMac,
+    onChange: v => {
+      set("dongMac", v);
+      if (v !== "Có") set("dongMacBenh", []);
+    }
+  })), d.dongMac === "Có" && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700 mb-1"
+  }, "Chọn các thể đồng mắc"), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap gap-x-4 gap-y-1"
+  }, BENH_DONG_MAC.map(([k, ten]) => {
+    const laBenhNay = k === benh;
+    return /*#__PURE__*/React.createElement("label", {
+      key: k,
+      className: `flex items-center gap-1.5 text-sm ${laBenhNay ? "text-gray-400 cursor-not-allowed" : "text-gray-700 cursor-pointer"}`
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      disabled: laBenhNay,
+      checked: chon.includes(k),
+      onChange: () => bat(k)
+    }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, k), " — ", ten, laBenhNay ? " (bệnh án hiện tại)" : ""));
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 text-sm text-gray-500"
+  }, "Hiển thị ngoài danh sách: ", /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: benh,
+    dongMac: chon.join(",")
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 text-xs text-gray-400"
+  }, "Thông tin này thuộc về bệnh nhân, không thuộc riêng một lần khám — sửa ở đây sẽ áp dụng cho tất cả các lần khám."));
+}
 function DiseaseTag({
   benh
 }) {
   if (!benh) return null;
-  const label = benh === "NONSCAR" ? "NS" : benh;
+  const label = kyHieu(benh);
   return /*#__PURE__*/ /*#__PURE__*/React.createElement("span", {
-    className: `inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mr-1.5 ${DISEASE_TAG_STYLE[benh] || "bg-gray-100 text-gray-600"}`
+    className: `inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mr-1.5 ${DISEASE_TAG_STYLE[label] || "bg-gray-100 text-gray-600"}`
   }, label);
 }
 
@@ -1955,8 +2043,8 @@ function QuickFillButton({
     className: "w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-50 border-t border-gray-100"
   }, "Đóng")));
 }
-const SECTIONS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
-const SECTIONS_FU = ["Lâm sàng", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng & điều trị", "Giải phẫu bệnh", "Hình ảnh"];
+const SECTIONS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát", "Tình trạng đồng mắc"];
+const SECTIONS_FU = ["Lâm sàng", "Mức độ nặng (SALT)", "Dermoscopy", "Cận lâm sàng & điều trị", "Giải phẫu bệnh", "Hình ảnh", "Tình trạng đồng mắc"];
 function NewCaseForm({
   initial,
   onDraftChange,
@@ -2480,6 +2568,13 @@ function NewCaseForm({
   /*#__PURE__*/
   React.createElement(SurveyTab, {
     d: d
+  }), tab === 10 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "AA"
   }), tab < SECTIONS_NEW.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -2807,6 +2902,13 @@ function FollowUpForm({
     images: d.anh,
     onChange: v => set("anh", v),
     uploadImage: uploadImage
+  }), tab === 6 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "AA"
   }), tab < SECTIONS_FU.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -2828,8 +2930,8 @@ function FollowUpForm({
     className: "px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200"
   }, "Hủy")));
 }
-const SECTIONS_AGA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Thang điểm", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
-const SECTIONS_AGA_FU = ["Lâm sàng", "Thang điểm", "Tác dụng phụ & Xét nghiệm", "Giải phẫu bệnh", "Điều trị", "Hình ảnh"];
+const SECTIONS_AGA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Thang điểm", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát", "Tình trạng đồng mắc"];
+const SECTIONS_AGA_FU = ["Lâm sàng", "Thang điểm", "Tác dụng phụ & Xét nghiệm", "Giải phẫu bệnh", "Điều trị", "Hình ảnh", "Tình trạng đồng mắc"];
 function NewAGAForm({
   initial,
   onDraftChange,
@@ -3300,6 +3402,13 @@ function NewAGAForm({
   /*#__PURE__*/
   React.createElement(SurveyTab, {
     d: d
+  }), tab === 10 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "AGA"
   }), tab < SECTIONS_AGA_NEW.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -3554,6 +3663,13 @@ function AGAFollowUpForm({
     images: d.anh,
     onChange: v => set("anh", v),
     uploadImage: uploadImage
+  }), tab === 6 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "AGA"
   }), tab < SECTIONS_AGA_FU.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -3575,8 +3691,8 @@ function AGAFollowUpForm({
     className: "px-4 py-2 bg-gray-100 text-gray-600 text-sm rounded-md hover:bg-gray-200"
   }, "Hủy")));
 }
-const SECTIONS_NS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
-const SECTIONS_NS_FU = ["Lâm sàng", "Giải phẫu bệnh", "Xét nghiệm & Điều trị", "Hình ảnh"];
+const SECTIONS_NS_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát", "Tình trạng đồng mắc"];
+const SECTIONS_NS_FU = ["Lâm sàng", "Giải phẫu bệnh", "Xét nghiệm & Điều trị", "Hình ảnh", "Tình trạng đồng mắc"];
 function NewNonScarForm({
   initial,
   onDraftChange,
@@ -4109,6 +4225,13 @@ function NewNonScarForm({
   /*#__PURE__*/
   React.createElement(SurveyTab, {
     d: d
+  }), tab === 9 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "NSA"
   }), tab < SECTIONS_NS_NEW.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -4289,6 +4412,13 @@ function NonScarFollowUpForm({
     images: d.anh,
     onChange: v => set("anh", v),
     uploadImage: uploadImage
+  }), tab === 4 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "NSA"
   }), tab < SECTIONS_NS_FU.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -4335,8 +4465,8 @@ const THUOC_BOI_SA = ["Corticosteroid", "Tacrolimus", "Minoxidil", "Clindamycin"
 const THU_THUAT_SA = ["Tiêm corticosteroid nội tổn thương (ILC)", "Corticosteroid xung TM (Pulse IV)", "NB-UVB", "PUVA", "Laser", "PRP", "Khác"];
 const THUOC_UONG_SA = ["Hydroxychloroquine", "Doxycycline", "Pioglitazone", "Dutasteride", "Finasteride", "Methotrexate", "MMF", "Cyclosporine", "Prednisolone", "JAK inhibitor", "Clindamycin + Rifampicin", "Azithromycin", "Isotretinoin", "Dapsone", "Zinc", "Acitretin", "Khác"];
 const TAC_DUNG_PHU_SA = ["Rối loạn tiêu hóa", "Độc gan (tăng ALT/AST)", "Giảm bạch cầu / huyết học", "Nhiễm trùng cơ hội (zona, nấm...)", "Tăng huyết áp / tim mạch", "Rối loạn kinh nguyệt (nữ)", "Tăng đường huyết / chuyển hóa", "Nhạy cảm ánh sáng (hydroxychloroquine)", "Lắng đọng võng mạc (hydroxychloroquine)", "Tác dụng phụ tại chỗ (teo da, giãn mạch)", "Khác"];
-const SECTIONS_SA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (LPPAI)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
-const SECTIONS_SA_FU = ["Lâm sàng", "Mức độ nặng (LPPAI)", "Dermoscopy", "Xét nghiệm & Tác dụng phụ", "Giải phẫu bệnh", "Điều trị", "Hình ảnh"];
+const SECTIONS_SA_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Khám thực thể", "Mức độ nặng (LPPAI)", "Dermoscopy", "Cận lâm sàng", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát", "Tình trạng đồng mắc"];
+const SECTIONS_SA_FU = ["Lâm sàng", "Mức độ nặng (LPPAI)", "Dermoscopy", "Xét nghiệm & Tác dụng phụ", "Giải phẫu bệnh", "Điều trị", "Hình ảnh", "Tình trạng đồng mắc"];
 const NEW_SA_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "icd10", "nahrs", "luuHuyetTuong", "luuHuyetThanh"],
   "Bệnh sử - Tiền sử": ["tuoiKhoiPhat", "thoiGianMacBenh", "yeuToKhoiPhat", "viTriKhoiPhat", "tienTrienTonThuong", "benhSuTruoc", "dieuTriTruocDoStatus", "tienSuBanThan", "thoiQuenChamSocToc", "tienSuGiaDinh"],
@@ -4346,7 +4476,8 @@ const NEW_SA_CASE_SECTIONS = {
   "Cận lâm sàng": ["labs", "soiNam", "cayViKhuan", "pcrDemodex", "xnKhac"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const FOLLOWUP_SA_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "lamSang", "pullTest", "dienTichPhanTram", "thayDoiSoVoiTruoc", "trieuChungCoNang"],
@@ -4355,7 +4486,8 @@ const FOLLOWUP_SA_SECTIONS = {
   "Xét nghiệm & Tác dụng phụ": ["xnStatus", "thuocDangDung", "tacDungPhu"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị": ["thuocUongCo", "thuocBoiCo", "thuThuatCo"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 
 // Bảng điểm LPPAI dùng chung cho bệnh án mới và tái khám
@@ -4891,6 +5023,13 @@ function NewSAForm({
   /*#__PURE__*/
   React.createElement(SurveyTab, {
     d: d
+  }), tab === 10 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "SA"
   }), tab < SECTIONS_SA_NEW.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -5153,6 +5292,13 @@ function SAFollowUpForm({
     images: d.anh,
     onChange: v => set("anh", v),
     uploadImage: uploadImage
+  }), tab === 7 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "SA"
   }), tab < SECTIONS_SA_FU.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -5203,8 +5349,8 @@ const LABS_TTM = [["hongCau", "Hồng cầu", "T/L"], ["hgb", "HGB", "G/L"], ["b
 const THUOC_UONG_TTM = ["Acetylcysteine (NAC)", "SSRI (fluoxetine, sertraline...)", "Clomipramine", "Naltrexone", "Olanzapine", "Vitamin", "Khác"];
 const THUOC_BOI_TTM = ["Minoxidil", "Dưỡng chất da đầu", "Khác"];
 const THU_THUAT_TTM = ["Không", "Tiêm nội tổn thương", "Khác"];
-const SECTIONS_TTM_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Hành vi nhổ tóc", "Thang điểm (MGH-HPS)", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Chẩn đoán DSM-5", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát"];
-const SECTIONS_TTM_FU = ["Lâm sàng", "Thang điểm (MGH-HPS)", "Dermoscopy", "Tác dụng phụ & Điều trị", "Giải phẫu bệnh", "Hình ảnh"];
+const SECTIONS_TTM_NEW = ["Hành chính", "Bệnh sử - Tiền sử", "Hành vi nhổ tóc", "Thang điểm (MGH-HPS)", "Khám thực thể", "Dermoscopy", "Cận lâm sàng", "Chẩn đoán DSM-5", "Giải phẫu bệnh", "Điều trị & thủ thuật", "Hình ảnh", "Phiếu khảo sát", "Tình trạng đồng mắc"];
+const SECTIONS_TTM_FU = ["Lâm sàng", "Thang điểm (MGH-HPS)", "Dermoscopy", "Tác dụng phụ & Điều trị", "Giải phẫu bệnh", "Hình ảnh", "Tình trạng đồng mắc"];
 const NEW_TTM_CASE_SECTIONS = {
   "Hành chính": ["ngayKham", "bacSiKham", "ngheNghiep", "trinhDo", "chieuCao", "canNang"],
   "Bệnh sử - Tiền sử": ["tuoiKhoiPhat", "thoiGianMacBenh", "hoanCanhKhoiPhat", "aiNhoToc", "dieuTriTruoc", "dapUngDieuTriTruoc", "tienSuBanThan", "tienSuGiaDinh"],
@@ -5216,7 +5362,8 @@ const NEW_TTM_CASE_SECTIONS = {
   "Chẩn đoán DSM-5": ["dsm5", "ketLuanChanDoan"],
   "Giải phẫu bệnh": ["gpbCo"],
   "Điều trị & thủ thuật": ["hrt", "thuocUongCo", "thuocBoiCo", "thuThuatCo", "henKham"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 const FOLLOWUP_TTM_SECTIONS = {
   "Lâm sàng": ["ngayKham", "bacSiKham", "soVoiLanTruoc", "nhoTocGiua2Lan", "tuanThuDieuTri", "dienTichPhanTram", "tocMocLai", "mangRungMoi", "dauHieuRTS"],
@@ -5224,7 +5371,8 @@ const FOLLOWUP_TTM_SECTIONS = {
   "Dermoscopy": ["dauHieuTraumatic", "loNang", "tocMocLaiDuoiKinh", "ketLuanDermoscopy"],
   "Tác dụng phụ & Điều trị": ["tacDungPhuStatus", "thuocUongCo", "thuocBoiCo", "thuThuatCo"],
   "Giải phẫu bệnh": ["gpbCo"],
-  "Hình ảnh": ["anh"]
+  "Hình ảnh": ["anh"],
+  "Tình trạng đồng mắc": ["dongMac"]
 };
 
 // Thang MGH-HPS dùng chung cho bệnh án mới và tái khám
@@ -5731,6 +5879,13 @@ function NewTTMForm({
   /*#__PURE__*/
   React.createElement(SurveyTab, {
     d: d
+  }), tab === 12 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "TTM"
   }), tab < SECTIONS_TTM_NEW.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -6014,6 +6169,13 @@ function TTMFollowUpForm({
     images: d.anh,
     onChange: v => set("anh", v),
     uploadImage: uploadImage
+  }), tab === 6 &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement(DongMacTab, {
+    d: d,
+    set: set,
+    benh: "TTM"
   }), tab < SECTIONS_TTM_FU.length - 1 &&
   /*#__PURE__*/
   /*#__PURE__*/
@@ -7078,6 +7240,7 @@ function App() {
       hoTen: r.ho_ten,
       maLuuTru: r.ma_luu_tru,
       benh: r.benh,
+      dongMac: r.dong_mac,
       daDienDuLieu: !!r.da_dien_du_lieu,
       followupId: r.followup_id,
       record: {
@@ -7120,6 +7283,7 @@ function App() {
       hoTen: r.ho_ten,
       maLuuTru: r.ma_luu_tru,
       benh: r.benh,
+      dongMac: r.dong_mac,
       days: r.days,
       followupId: r.followup_id
     })));
@@ -7143,6 +7307,7 @@ function App() {
       maLuuTru: r.ma_luu_tru,
       ngay: r.ngay,
       benh: r.benh,
+      dongMac: r.dong_mac,
       mucDo: r.muc_do_nang,
       daDienDuLieu: !!r.da_dien_du_lieu,
       followupId: r.followup_id,
@@ -7853,8 +8018,9 @@ function App() {
     key: i,
     onClick: () => openRecord(r),
     className: "w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: r.benh
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: r.benh,
+    dongMac: r.dongMac
   }), r.loai, " — ", r.hoTen || r.maBN, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-gray-400"
   }, "(", r.maLuuTru, ")")), /*#__PURE__*/React.createElement("span", {
@@ -7890,8 +8056,9 @@ function App() {
     className: "flex items-center justify-between text-sm gap-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "truncate flex items-center"
-  }, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: r.benh
+  }, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: r.benh,
+    dongMac: r.dongMac
   }), r.hoTen || r.maBN), /*#__PURE__*/React.createElement("span", {
     className: "px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs whitespace-nowrap"
   }, r.days, " ngày")), /*#__PURE__*/React.createElement("div", {
@@ -7948,7 +8115,7 @@ function App() {
     label: "Loại bệnh"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex flex-wrap gap-x-4 gap-y-1"
-  }, [["", "Tất cả"], ["AA", "AA"], ["AGA", "AGA"], ["NONSCAR", "NS"], ["SA", "SA"], ["TTM", "TTM"]].map(([val, label]) =>
+  }, [["", "Tất cả"], ["AA", "AA"], ["AGA", "AGA"], ["NONSCAR", "NSA"], ["SA", "SA"], ["TTM", "TTM"]].map(([val, label]) =>
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("label", {
@@ -8067,8 +8234,9 @@ function App() {
     key: i,
     onClick: () => openRecord(r),
     className: "w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50"
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: r.benh
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: r.benh,
+    dongMac: r.dongMac
   }), r.loai, " — ", r.hoTen || r.maBN, " ", /*#__PURE__*/React.createElement("span", {
     className: "text-gray-400"
   }, "(", r.maLuuTru, ", ", r.ngay, ")", searchFilters.soLuotTaiKhamItNhat ? ` · tổng ${r.soLuotTK} lượt tái khám` : "")), /*#__PURE__*/React.createElement("span", {
@@ -8175,7 +8343,7 @@ function App() {
   React.createElement("button", {
     key: dz.k,
     disabled: !dz.active || !user.can_create,
-    onClick: () => dz.active && user.can_create && createCase(dz.k.toLowerCase()),
+    onClick: () => dz.active && user.can_create && createCase(dz.key),
     className: `text-left px-4 py-3 rounded-md border text-sm ${dz.active ? "border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100" : "border-gray-200 bg-gray-50 text-gray-400"} ${!dz.active || !user.can_create ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`
   }, /*#__PURE__*/React.createElement("div", {
     className: "font-medium"
@@ -8193,8 +8361,9 @@ function App() {
     className: "flex items-center justify-between mb-3 flex-wrap gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-sm text-gray-500 flex items-center flex-wrap gap-x-1"
-  }, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: currentDisease.toUpperCase()
+  }, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: kyHieu(currentDisease),
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
   }), patient.hoTen, " —", /*#__PURE__*/React.createElement("button", {
     onClick: openTimelineFromForm,
     title: "Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển",
@@ -8277,8 +8446,9 @@ function App() {
     className: "flex items-center justify-between flex-wrap gap-2"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "font-medium flex items-center"
-  }, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: currentDisease.toUpperCase()
+  }, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: kyHieu(currentDisease),
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
   }), patient.hoTen, " — ", patient.maBN), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-400"
   }, "Mã lưu trữ ", aaCase.maLuuTru, " · ", patient.gioiTinh, ", sinh ", patient.ngaySinh || patient.namSinh)), /*#__PURE__*/React.createElement("div", {
@@ -8304,7 +8474,7 @@ function App() {
   React.createElement("button", {
     className: "px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100",
     onClick: () => {
-      if (window.confirm(`Xoá bệnh án ${currentDisease.toUpperCase()} này (bệnh án mới + mọi lần tái khám)? Giữ lại thông tin bệnh nhân. Không thể hoàn tác.`)) deleteCurrentCase();
+      if (window.confirm(`Xoá bệnh án ${kyHieu(currentDisease)} này (bệnh án mới + mọi lần tái khám)? Giữ lại thông tin bệnh nhân. Không thể hoàn tác.`)) deleteCurrentCase();
     }
   }, "Xoá bệnh án này"), user.can_export &&
   /*#__PURE__*/
@@ -8358,8 +8528,9 @@ function App() {
     className: "px-4 py-3 flex items-center justify-between text-sm"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "font-medium flex items-center"
-  }, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: currentDisease.toUpperCase()
+  }, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: kyHieu(currentDisease),
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
   }), "T0 — Bệnh án mới (", aaCase.benhAnMoi?.ngayKham || "chưa có ngày", ")"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-400"
   }, currentDisease === "aga" ? `Hamilton-Norwood ${aaCase.benhAnMoi?.hamiltonNorwood || "—"} · Sinclair ${aaCase.benhAnMoi?.sinclairScale || "—"}` : currentDisease === "nonscar" ? `Kiểu rụng tóc: ${aaCase.benhAnMoi?.kieuRungToc || "—"}` : currentDisease === "sa" ? `LPPAI ${calcLppai(aaCase.benhAnMoi || {}) ?? "—"} · ${aaCase.benhAnMoi?.icd10 || "chưa chọn ICD-10"}` : currentDisease === "ttm" ? `MGH-HPS ${calcMgh(aaCase.benhAnMoi || {}) ?? "—"}/28 · ${mucDoMgh(calcMgh(aaCase.benhAnMoi || {})) || "—"}` : `SALT ${fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · ${aaCase.benhAnMoi?.theLamSang || "—"}`)), /*#__PURE__*/React.createElement("span", {
@@ -8381,8 +8552,9 @@ function App() {
       className: "w-full text-left px-4 py-3 flex items-center justify-between text-sm hover:bg-gray-50"
     }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "font-medium flex items-center"
-    }, /*#__PURE__*/React.createElement(DiseaseTag, {
-      benh: currentDisease.toUpperCase()
+    }, /*#__PURE__*/React.createElement(DiseaseTags, {
+      benh: kyHieu(currentDisease),
+      dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
     }), "Tái khám ", i + 1, " (", tk.ngayKham || "chưa có ngày", ")"), /*#__PURE__*/React.createElement("div", {
       className: "text-xs text-gray-400"
     }, currentDisease === "aga" ? `Hamilton-Norwood ${tk.hamiltonNorwood || "—"} · Sinclair ${tk.sinclairScale || "—"}` : currentDisease === "nonscar" ? `Mức độ so với trước: ${tk.mucDoSoVoiTruoc || "—"}` : currentDisease === "sa" ? `LPPAI ${calcLppai(tk) ?? "—"}${tk.thayDoiSoVoiTruoc ? ` · ${tk.thayDoiSoVoiTruoc} so lần trước` : ""}` : currentDisease === "ttm" ? `MGH-HPS ${calcMgh(tk) ?? "—"}/28${tk.soVoiLanTruoc ? ` · ${tk.soVoiLanTruoc}` : ""}` : `SALT ${fmt(s)}${tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}`)), /*#__PURE__*/React.createElement("span", {
@@ -8408,8 +8580,9 @@ function App() {
     className: "flex items-center justify-between mb-3 flex-wrap gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-sm text-gray-500 flex items-center flex-wrap gap-x-1"
-  }, /*#__PURE__*/React.createElement(DiseaseTag, {
-    benh: currentDisease.toUpperCase()
+  }, /*#__PURE__*/React.createElement(DiseaseTags, {
+    benh: kyHieu(currentDisease),
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
   }), patient.hoTen, " —", /*#__PURE__*/React.createElement("button", {
     onClick: openTimelineFromForm,
     title: "Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển",
