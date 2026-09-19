@@ -892,6 +892,9 @@ const napHeic = () => napThuVien("https://unpkg.com/heic2any/dist/heic2any.min.j
 function isHeicFile(file) {
   return /\.hei[cf]$/i.test(file.name || "") || /^image\/hei[cf]/i.test(file.type || "");
 }
+// Chỉ dùng khi trình duyệt không nén được WebP (Safari/iPhone). Máy chủ sẽ đổi JPEG này sang WebP
+// trước khi lưu, nên để chất lượng cao: ảnh chỉ bị nén "thật" 1 lần ở máy chủ, không mờ đi 2 lần.
+const JPEG_Q = 0.95;
 async function toWebp(file, maxW = 900, q = 0.75, onStage) {
   let working = file;
   if (isHeicFile(file)) {
@@ -909,7 +912,7 @@ async function toWebp(file, maxW = 900, q = 0.75, onStage) {
       throw new Error("Không đọc được ảnh HEIC này — thử chụp lại hoặc chọn ảnh khác.");
     }
   }
-  onStage && onStage("Đang nén WebP...");
+  onStage && onStage("Đang nén ảnh...");
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -920,7 +923,12 @@ async function toWebp(file, maxW = 900, q = 0.75, onStage) {
         canvas.width = img.width * scale;
         canvas.height = img.height * scale;
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/webp", q));
+        // Safari trên iPhone/iPad/Mac (và mọi trình duyệt trên iPhone, vì đều dùng lõi Safari)
+        // KHÔNG nén được WebP: gọi toDataURL("image/webp") sẽ âm thầm trả về PNG không nén,
+        // nặng 1-2 MB/ảnh thay vì ~100 KB. Nhận ra trường hợp đó và gửi JPEG (máy chủ đổi sang WebP).
+        let out = canvas.toDataURL("image/webp", q);
+        if (!out.startsWith("data:image/webp")) out = canvas.toDataURL("image/jpeg", JPEG_Q);
+        resolve(out);
       };
       img.onerror = () => reject(new Error("Không đọc được file ảnh này."));
       img.src = reader.result;
