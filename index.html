@@ -2092,10 +2092,13 @@ function SurveySyncBar({
         });
         return;
       }
+      let boSung = [];
+      if (r.boSungBenhNhan) boSung = await r.boSungBenhNhan().catch(() => []);
+      const ghiChuBoSung = boSung.length ? ` Đã bổ sung ${boSung.join(", ")} vào thông tin bệnh nhân.` : "";
       if (!r.co_khao_sat) {
         setMsg({
           ok: false,
-          text: "Bệnh nhân có hồ sơ trên hệ thống bệnh viện nhưng CHƯA điền phiếu khảo sát."
+          text: "Bệnh nhân có hồ sơ trên hệ thống bệnh viện nhưng CHƯA điền phiếu khảo sát." + ghiChuBoSung
         });
         return;
       }
@@ -2109,7 +2112,7 @@ function SurveySyncBar({
       }
       setMsg({
         ok: true,
-        text: `Đã điền ${soTruong} trường từ phiếu khảo sát${r.ngay_kham ? ` ngày ${r.ngay_kham}` : ""}${laDanTay ? " (dán thủ công)" : ""}. Toàn bộ câu trả lời được lưu ở tab “Phiếu khảo sát”.`
+        text: `Đã điền ${soTruong} trường từ phiếu khảo sát${r.ngay_kham ? ` ngày ${r.ngay_kham}` : ""}${laDanTay ? " (dán thủ công)" : ""}. Toàn bộ câu trả lời được lưu ở tab “Phiếu khảo sát”.${ghiChuBoSung}`
       });
     } catch (e) {
       setMsg({
@@ -7998,10 +8001,39 @@ function App() {
       body: JSON.stringify({
         noi_dung: tuyChon.noiDung || ""
       })
-    });
+    }).then(ganBoSungBenhNhan);
     if (kieu === "lien_ket") return api(`/survey/${ma}/lien-ket`);
     if (kieu === "trang_thai") return api(`/tram/trang-thai`);
-    return api(`/survey/${ma}${q}`);
+    return api(`/survey/${ma}${q}`).then(ganBoSungBenhNhan);
+  }
+  // Khi đồng bộ phiếu trong bệnh án: bổ sung thông tin hành chính CÒN TRỐNG của bệnh nhân
+  // (không ghi đè những gì bác sĩ đã nhập tay). Thanh đồng bộ gọi r.boSungBenhNhan() sau khi
+  // nhận phiếu, rồi báo lại những ô đã bổ sung.
+  function ganBoSungBenhNhan(r) {
+    if (!r || !r.found) return r;
+    r.boSungBenhNhan = async () => {
+      const cot = [["hoTen", r.ho_ten, "họ tên"], ["ngaySinh", r.ngay_sinh, "ngày sinh"], ["namSinh", r.nam_sinh, "năm sinh"], ["gioiTinh", r.gioi_tinh, "giới"], ["danToc", r.dan_toc, "dân tộc"], ["diaChi", r.dia_chi, "địa chỉ"], ["sdt", r.sdt, "số điện thoại"]];
+      const patch = {};
+      const nhan = [];
+      cot.forEach(([k, v, ten]) => {
+        if (v && !isFilled(patient[k])) {
+          patch[k] = v;
+          nhan.push(ten);
+        }
+      });
+      if (!nhan.length) return [];
+      const moi = {
+        ...patient,
+        ...patch
+      };
+      await api("/patients", {
+        method: "POST",
+        body: JSON.stringify(patientPayload(moi))
+      });
+      setPatient(moi);
+      return nhan;
+    };
+    return r;
   }
   // Tự lấy họ tên + ngày sinh khi mã bệnh nhân chưa có trong phần mềm.
   async function lookupHIS(maBN, apply) {
@@ -8025,11 +8057,14 @@ function App() {
         hoTen: r.ho_ten || prev.hoTen,
         ngaySinh: r.ngay_sinh || prev.ngaySinh,
         namSinh: r.nam_sinh || prev.namSinh,
-        gioiTinh: r.gioi_tinh || prev.gioiTinh
+        gioiTinh: r.gioi_tinh || prev.gioiTinh,
+        danToc: r.dan_toc || prev.danToc,
+        diaChi: r.dia_chi || prev.diaChi,
+        sdt: r.sdt || prev.sdt
       }));
       setHisMsg({
         ok: true,
-        text: `Đã lấy họ tên và ngày sinh từ hệ thống bệnh viện — bệnh nhân ${r.co_khao_sat ? "ĐÃ" : "CHƯA"} điền phiếu khảo sát.`
+        text: `Đã lấy họ tên, ngày sinh, dân tộc, địa chỉ, số điện thoại từ hệ thống bệnh viện — bệnh nhân ${r.co_khao_sat ? "ĐÃ" : "CHƯA"} điền phiếu khảo sát${r.co_khao_sat ? "" : " (nên chưa có giới tính)"}. Kiểm tra lại trước khi lưu.`
       });
     } catch (e) {
       setHisMsg({
