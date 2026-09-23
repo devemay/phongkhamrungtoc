@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#1c4f8f">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="BA Rụng tóc">
@@ -8257,13 +8258,28 @@ function App() {
       sdt: p.sdt
     };
   }
+  // Mọi thao tác GHI (tạo/lưu/xoá) đều đi qua đây: nếu máy chủ lỗi thì PHẢI hiện rõ câu báo lỗi.
+  // Trước đây lỗi bị "nuốt" mất nên bác sĩ bấm nút mà không thấy gì xảy ra, tưởng phần mềm đơ.
+  async function thuChay(moTa, fn) {
+    try {
+      return await fn();
+    } catch (e) {
+      const tb = `KHÔNG ${moTa.toUpperCase()} ĐƯỢC.\n\nMáy chủ báo: ${e && e.message ? e.message : e}\n\nDữ liệu bạn vừa nhập vẫn còn trên màn hình — đừng đóng trang. Thử bấm lại sau ít phút; nếu vẫn lỗi, chụp màn hình này gửi người quản trị.`;
+      console.error("[Lỗi khi " + moTa + "]", e);
+      window.alert(tb);
+      return false; // báo cho nơi gọi biết là KHÔNG thành công (không ném lỗi ra ngoài
+      // để trình duyệt khỏi ghi "Uncaught (in promise)" khó hiểu)
+    }
+  }
   async function savePatientAndGoChoose(p) {
-    await api("/patients", {
-      method: "POST",
-      body: JSON.stringify(patientPayload(p))
+    return thuChay("lưu thông tin bệnh nhân", async () => {
+      await api("/patients", {
+        method: "POST",
+        body: JSON.stringify(patientPayload(p))
+      });
+      setPatient(p);
+      setView("chooseDisease");
     });
-    setPatient(p);
-    setView("chooseDisease");
   }
   // Sửa thông tin hành chính (địa chỉ, số điện thoại...) — bác sĩ và tài khoản nghiên cứu
   function startEditPatient() {
@@ -8274,92 +8290,101 @@ function App() {
     setView("editPatient");
   }
   async function savePatientEdit() {
-    await api("/patients", {
-      method: "POST",
-      body: JSON.stringify(patientPayload(patientDraft))
+    return thuChay("lưu thông tin bệnh nhân", async () => {
+      await api("/patients", {
+        method: "POST",
+        body: JSON.stringify(patientPayload(patientDraft))
+      });
+      setPatient(patientDraft);
+      setPatientDraft(null);
+      setHisMsg(null);
+      setView(aaCase ? "timeline" : "chooseDisease");
     });
-    setPatient(patientDraft);
-    setPatientDraft(null);
-    setHisMsg(null);
-    setView(aaCase ? "timeline" : "chooseDisease");
   }
   // Bấm vào mã bệnh nhân trong phiếu đang mở -> lưu nốt phiếu rồi chuyển sang xem toàn bộ lần khám
   async function openTimelineFromForm() {
     const draft = draftRef.current;
-    try {
-      if (view === "newCase" && draft) {
-        await saveNewCase(draft);
-        return;
-      }
-      if (view === "followup" && draft) {
-        await saveFollowUp(draft);
-        return;
-      }
-    } catch (e) {
-      window.alert("Không lưu được phiếu đang mở nên chưa chuyển màn: " + e.message);
+    // Lưu nốt phiếu đang mở rồi mới chuyển màn. Nếu lưu hỏng thì thuChay() đã hiện báo lỗi,
+    // ở đây chỉ cần ở lại màn nhập liệu để bác sĩ không mất dữ liệu vừa gõ.
+    if (view === "newCase" && draft) {
+      await saveNewCase(draft);
+      return;
+    }
+    if (view === "followup" && draft) {
+      await saveFollowUp(draft);
       return;
     }
     setView("timeline");
   }
   async function createCase(disease) {
-    setCurrentDisease(disease);
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}/create`, {
-      method: "POST",
-      body: JSON.stringify({})
+    return thuChay("tạo bệnh án mới", async () => {
+      setCurrentDisease(disease);
+      await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}/create`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}`);
+      setAaCase(mapCaseFromApi(c));
+      setView("newCase");
     });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${disease}`);
-    setAaCase(mapCaseFromApi(c));
-    setView("newCase");
   }
   async function saveNewCase(data) {
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        data
-      })
+    return thuChay("lưu bệnh án", async () => {
+      await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          data
+        })
+      });
+      const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
+      setAaCase(mapCaseFromApi(c));
+      setView("timeline");
+      loadToday();
+      loadGpbWaitlist();
     });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
-    setAaCase(mapCaseFromApi(c));
-    setView("timeline");
-    loadToday();
-    loadGpbWaitlist();
   }
   async function createFollowup() {
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/create`, {
-      method: "POST",
-      body: JSON.stringify({})
+    return thuChay("tạo lần tái khám", async () => {
+      await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/create`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
+      const cc = mapCaseFromApi(c);
+      setAaCase(cc);
+      setEditIdx(cc.taiKhams.length - 1);
+      setView("followup");
     });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
-    const cc = mapCaseFromApi(c);
-    setAaCase(cc);
-    setEditIdx(cc.taiKhams.length - 1);
-    setView("followup");
   }
   async function saveFollowUp(data) {
-    const fid = aaCase.taiKhams[editIdx].id;
-    await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/${fid}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        data
-      })
+    return thuChay("lưu lần tái khám", async () => {
+      const fid = aaCase.taiKhams[editIdx].id;
+      await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}/followups/${fid}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          data
+        })
+      });
+      const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
+      setAaCase(mapCaseFromApi(c));
+      setEditIdx(null);
+      setView("timeline");
+      loadToday();
+      loadGpbWaitlist();
     });
-    const c = await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`);
-    setAaCase(mapCaseFromApi(c));
-    setEditIdx(null);
-    setView("timeline");
-    loadToday();
-    loadGpbWaitlist();
   }
   async function deletePatientRecord(maBN) {
-    await api(`/patients/${encodeURIComponent(maBN)}`, {
-      method: "DELETE"
+    return thuChay("xoá hồ sơ", async () => {
+      await api(`/patients/${encodeURIComponent(maBN)}`, {
+        method: "DELETE"
+      });
+      setPatient(null);
+      setAaCase(null);
+      setMaBNInput("");
+      setView("home");
+      loadToday();
+      loadGpbWaitlist();
     });
-    setPatient(null);
-    setAaCase(null);
-    setMaBNInput("");
-    setView("home");
-    loadToday();
-    loadGpbWaitlist();
   }
   async function deleteCurrentCase() {
     await api(`/cases/${encodeURIComponent(patient.maBN)}/${currentDisease}`, {
