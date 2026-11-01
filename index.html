@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <title>Bệnh án nghiên cứu — Rụng tóc mảng (AA)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1c4f8f">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BA Rụng tóc">
 <!-- ĐỊA CHỈ MÁY CHỦ (backend). Muốn đổi sang máy chủ khác thì sửa đúng dòng dưới đây.
      Dòng này BẮT BUỘC phải nằm TRƯỚC khối mã ứng dụng ở cuối trang, nếu không phần mềm
      sẽ đi tìm máy chủ ở localhost và báo "Không kết nối được tới backend". -->
@@ -512,7 +504,8 @@ function mapPatientFromApi(p) {
     ngaySinh: p.ngay_sinh || "",
     danToc: p.dan_toc,
     diaChi: p.dia_chi,
-    sdt: p.sdt
+    sdt: p.sdt,
+    deTaiAi: !!p.de_tai_ai
   };
 }
 const BAC_SI = ["BS Hà Vinh", "BS Tuỳ", "BS Xuân", "BS Tráng", "BS Trang", "BS Ngọc Anh"];
@@ -2576,11 +2569,14 @@ const DISEASE_TAG_STYLE = {
 // Hiển thị ký hiệu bệnh chính kèm các bệnh đồng mắc (nếu có).
 function DiseaseTags({
   benh,
-  dongMac
+  dongMac,
+  ai
 }) {
   const chinh = kyHieu(benh);
   const them = String(dongMac || "").split(",").map(x => x.trim()).filter(Boolean).map(kyHieu).filter(k => k !== chinh);
-  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(DiseaseTag, {
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(AiTag, {
+    on: ai
+  }), /*#__PURE__*/React.createElement(DiseaseTag, {
     benh: chinh
   }), them.map(k => /*#__PURE__*/React.createElement(DiseaseTag, {
     key: k,
@@ -2679,6 +2675,17 @@ function DongMacTab({
   })), /*#__PURE__*/React.createElement("div", {
     className: "mt-1 text-xs text-gray-400"
   }, "Thông tin này thuộc về bệnh nhân, không thuộc riêng một lần khám — sửa ở đây sẽ áp dụng cho tất cả các lần khám."));
+}
+// Thẻ "Đề tài AI": màu tím đậm, khác hẳn màu các thẻ bệnh (đỏ/xanh/vàng) để nhìn lướt
+// qua danh sách là thấy ngay ca nào thuộc đề tài.
+function AiTag({
+  on
+}) {
+  if (!on) return null;
+  return /*#__PURE__*/ /*#__PURE__*/React.createElement("span", {
+    title: "Bệnh nhân thuộc Đề tài AI",
+    className: "inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold mr-1.5 bg-violet-600 text-white"
+  }, "AI");
 }
 function DiseaseTag({
   benh
@@ -3237,6 +3244,63 @@ const EXTRA_TAB_KEYS = {
 };
 function tabKeys(sectionMap, name) {
   return sectionMap[name] || EXTRA_TAB_KEYS[name] || [];
+}
+
+// ---------- Cây chọn trường để xuất Excel ----------
+// Dùng lại ĐÚNG các mục (tab) của phiếu khám, nên người dùng tìm ô theo đúng chỗ họ vẫn nhập.
+// Thêm một ít ô hay dùng khi phân tích mà bảng "mục bắt buộc" không liệt kê (kết quả GPB,
+// chi tiết thuốc, bản đồ SALT, phiếu bệnh nhân tự điền).
+// Phải khớp với GIOI_HAN_HO_SO_XUAT trong backend/main.py — đổi thì đổi cả hai nơi.
+const GIOI_HAN_HO_SO_XUAT = 100;
+const O_THEM_XUAT = {
+  "Hành chính": ["luuHuyetThanh", "luuHuyetTuong", "bacSiKhamKem"],
+  "Giải phẫu bệnh": ["gpbNgayThucHien", "gpbKetQua", "gpbNhanXet", "gpbBacSi"],
+  "Điều trị & thủ thuật": ["dieuTri", "thuocUongLoai", "thuocUongLieu", "thuocBoiLoai", "thuocBoiLieu", "thuThuatLoai", "thuThuatLieu"],
+  "Điều trị": ["dieuTri", "thuocUongLoai", "thuocBoiLoai", "thuThuatLoai"],
+  "Cận lâm sàng & điều trị": ["dieuTri", "thuocUongLoai", "thuocBoiLoai", "thuThuatLoai"],
+  "Xét nghiệm & Điều trị": ["dieuTri", "thuocUongLoai", "thuocBoiLoai", "thuThuatLoai"],
+  "Mức độ nặng (SALT)": ["saltO"],
+  "Bệnh sử - Tiền sử": ["soLanTaiPhat", "dieuTriTruocChiTiet"],
+  "Lâm sàng": ["tacDungPhuChiTiet"],
+  "Phiếu khảo sát": ["khaoSat", "khaoSatNgay", "khaoSatDlqiTong", "khaoSatMghTong"]
+};
+// Ô hành chính của BỆNH NHÂN và ô của HỒ SƠ — giống nhau ở mọi bệnh.
+const NHOM_BENH_NHAN = [["maBN", "Mã bệnh nhân"], ["hoTen", "Họ tên"], ["gioiTinh", "Giới tính"], ["namSinh", "Năm sinh"], ["ngaySinh", "Ngày sinh"], ["danToc", "Dân tộc"], ["diaChi", "Địa chỉ"], ["sdt", "Điện thoại"], ["deTaiAi", "Thuộc Đề tài AI"]];
+const NHOM_HO_SO = [["maLuuTru", "Mã lưu trữ"], ["benh", "Loại bệnh"], ["ngayTao", "Ngày tạo hồ sơ"], ["theLamSang", "Thể lâm sàng"], ["mucDoNang", "Mức độ nặng"], ["dongMac", "Bệnh đồng mắc"], ["gpbTrangThai", "Trạng thái giải phẫu bệnh"], ["soLanTaiKham", "Số lần tái khám"], ["daDienDuLieu", "Đã điền đủ dữ liệu"]];
+// Bảng tra mục (tab) theo từng bệnh — khoá đúng như trong địa chỉ API.
+// Cố ý viết thành HÀM chứ không phải hằng số: các bảng mục của SA/TTM được khai báo ở phía
+// dưới file, hằng số chạy ngay lúc nạp sẽ đọc phải biến chưa khởi tạo và làm trắng trang.
+function mucTheoBenh(benhKey) {
+  const bang = {
+    aa: [NEW_CASE_SECTIONS, FOLLOWUP_SECTIONS],
+    aga: [NEW_AGA_CASE_SECTIONS, FOLLOWUP_AGA_SECTIONS],
+    nonscar: [NEW_NONSCAR_CASE_SECTIONS, FOLLOWUP_NONSCAR_SECTIONS],
+    sa: [NEW_SA_CASE_SECTIONS, FOLLOWUP_SA_SECTIONS],
+    ttm: [NEW_TTM_CASE_SECTIONS, FOLLOWUP_TTM_SECTIONS]
+  };
+  return bang[benhKey] || bang.aa;
+}
+function nhomTruong(sectionMap, tienTo) {
+  const ra = [];
+  Object.keys(sectionMap).forEach(ten => {
+    const khoa = [...(sectionMap[ten] || []), ...(O_THEM_XUAT[ten] || [])];
+    const daCo = new Set();
+    const truong = [];
+    khoa.forEach(k => {
+      if (daCo.has(k)) return;
+      daCo.add(k);
+      truong.push([tienTo + "." + k, nhanTruong(k.split(".").pop())]);
+    });
+    if (truong.length) ra.push([ten, truong]);
+  });
+  return ra;
+}
+function cayXuat(benhKey) {
+  const [mapMoi, mapTk] = mucTheoBenh(benhKey);
+  const moi = nhomTruong(mapMoi, "moi");
+  const ks = O_THEM_XUAT["Phiếu khảo sát"].map(k => ["moi." + k, nhanTruong(k)]);
+  moi.push(["Phiếu khảo sát", ks]);
+  return [["Bệnh nhân", [["Thông tin hành chính", NHOM_BENH_NHAN.map(([k, l]) => ["bn." + k, l])]]], ["Hồ sơ", [["Thông tin hồ sơ", NHOM_HO_SO.map(([k, l]) => ["hs." + k, l])]]], ["Bệnh án mới", moi], ["Các lần tái khám", nhomTruong(mapTk, "tk")]];
 }
 
 // ---------- Nút tròn "điền nhanh": điền 1 đáp án cho mọi câu Có/Không CÒN TRỐNG của mục đang mở ----------
@@ -8170,6 +8234,79 @@ function KetQuaGpbChiXem({
   }, "Chỉ bác sĩ giải phẫu bệnh sửa được phần này, ở màn “Giải phẫu bệnh”."));
 }
 
+// ---------- Bảng chọn trường để xuất Excel ----------
+// Mỗi mục (tab) là một dòng bấm mở/đóng được; trong mục là các ô tích. Tích ô nào thì file
+// Excel có đúng cột đó. Các ô thuộc "Các lần tái khám" nở thành L1_, L2_... theo số lần khám.
+function BangChonTruong({
+  benhKey,
+  chon,
+  setChon
+}) {
+  const [moNhom, setMoNhom] = useState({});
+  const cay = cayXuat(benhKey);
+  const co = k => chon.includes(k);
+  const bat = k => setChon(chon.includes(k) ? chon.filter(x => x !== k) : [...chon, k]);
+  function batCaMuc(truong, hetChua) {
+    const khoa = truong.map(t => t[0]);
+    setChon(hetChua ? chon.filter(x => !khoa.includes(x)) : [...chon, ...khoa.filter(x => !chon.includes(x))]);
+  }
+  return /*#__PURE__*/ /*#__PURE__*/React.createElement("div", {
+    className: "border border-gray-200 rounded-md divide-y divide-gray-100"
+  }, cay.map(([tenNhom, muc]) =>
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("div", {
+    key: tenNhom,
+    "data-nhom": tenNhom
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-3 py-1.5 bg-gray-50 text-xs font-semibold text-gray-600"
+  }, tenNhom), muc.map(([tenMuc, truong]) => {
+    const khoaMuc = tenNhom + "|" + tenMuc;
+    const daChon = truong.filter(t => co(t[0])).length;
+    const hetChua = daChon === truong.length;
+    return /*#__PURE__*/ /*#__PURE__*/React.createElement("div", {
+      key: khoaMuc,
+      className: "border-t border-gray-100"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 px-3 py-1.5"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => setMoNhom({
+        ...moNhom,
+        [khoaMuc]: !moNhom[khoaMuc]
+      }),
+      className: "flex-1 flex items-center gap-2 text-left text-sm hover:text-teal-700"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-gray-400 w-3"
+    }, moNhom[khoaMuc] ? "▾" : "▸"), /*#__PURE__*/React.createElement("span", null, tenMuc), daChon > 0 &&
+    /*#__PURE__*/
+    /*#__PURE__*/
+    React.createElement("span", {
+      className: "px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 text-[10px]"
+    }, daChon, "/", truong.length)), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: () => batCaMuc(truong, hetChua),
+      className: "text-xs px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 whitespace-nowrap"
+    }, hetChua ? "Bỏ cả mục" : "Chọn cả mục")), moNhom[khoaMuc] &&
+    /*#__PURE__*/
+    /*#__PURE__*/
+    React.createElement("div", {
+      className: "px-3 pb-2 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-4"
+    }, truong.map(([khoa, nhan]) =>
+    /*#__PURE__*/
+    /*#__PURE__*/
+    React.createElement("label", {
+      key: khoa,
+      className: "flex items-start gap-1.5 text-sm py-0.5 cursor-pointer"
+    }, /*#__PURE__*/React.createElement("input", {
+      type: "checkbox",
+      className: "mt-1",
+      checked: co(khoa),
+      onChange: () => bat(khoa)
+    }), /*#__PURE__*/React.createElement("span", null, nhan)))));
+  }))));
+}
+
 // ---------- Màn hình riêng của bác sĩ GIẢI PHẪU BỆNH ----------
 // Bác sĩ GPB không khám lâm sàng: chỉ cần danh sách ca đã sinh thiết, xem bệnh án để đối chiếu,
 // rồi nhập kết quả + ảnh tiêu bản. Toàn bộ phần lâm sàng ở màn này là CHỈ ĐỌC.
@@ -9428,6 +9565,7 @@ function App() {
     dieuTriChua: "",
     xetNghiemCo: "",
     chiChuaDien: false,
+    deTaiAi: false,
     soLuotTaiKhamItNhat: ""
   });
   const [searchResults, setSearchResults] = useState(null);
@@ -9621,6 +9759,7 @@ function App() {
       loai: r.loai,
       maBN: r.ma_bn,
       hoTen: r.ho_ten,
+      deTaiAi: !!r.de_tai_ai,
       maLuuTru: r.ma_luu_tru,
       benh: r.benh,
       dongMac: r.dong_mac,
@@ -9665,6 +9804,7 @@ function App() {
       loai: r.loai,
       maBN: r.ma_bn,
       hoTen: r.ho_ten,
+      deTaiAi: !!r.de_tai_ai,
       maLuuTru: r.ma_luu_tru,
       benh: r.benh,
       dongMac: r.dong_mac,
@@ -9683,12 +9823,14 @@ function App() {
     if (f.dieuTriChua) params.set("dieu_tri_chua", f.dieuTriChua);
     if (f.xetNghiemCo) params.set("xet_nghiem_co", f.xetNghiemCo);
     if (f.chiChuaDien) params.set("chi_chua_dien", "true");
+    if (f.deTaiAi) params.set("de_tai_ai", "true");
     if (f.soLuotTaiKhamItNhat) params.set("so_luot_tai_kham_it_nhat", f.soLuotTaiKhamItNhat);
     const res = await api(`/cases/search?${params.toString()}`);
     setSearchResults(res.ket_qua.map(r => ({
       loai: r.loai,
       maBN: r.ma_bn,
       hoTen: r.ho_ten,
+      deTaiAi: !!r.de_tai_ai,
       maLuuTru: r.ma_luu_tru,
       ngay: r.ngay,
       benh: r.benh,
@@ -10219,6 +10361,91 @@ function App() {
   // Bản tóm tắt: mỗi dòng 1 lần khám, chỉ các cột cốt lõi hay dùng để lọc/thống kê nhanh
   // Bọc mọi thao tác xuất Excel: báo lỗi rõ ràng thay vì im lặng không có gì xảy ra
   // (thư viện xlsx nay được tải khi bấm nút, nên có thêm khả năng lỗi mạng ở bước đó).
+  // ---------- xuất Excel chọn trường ----------
+  const [moChonTruong, setMoChonTruong] = useState(false);
+  const [truongChon, setTruongChon] = useState(["bn.maBN", "bn.hoTen", "bn.gioiTinh", "bn.namSinh", "hs.maLuuTru", "hs.benh"]);
+  const [dangXuatChon, setDangXuatChon] = useState(false);
+  // Bệnh dùng để dựng cây trường: lấy theo bộ lọc, nếu chưa lọc thì theo bệnh của kết quả đầu.
+  const benhChonTruong = React.useMemo(() => {
+    const nhan = searchFilters.benh || (searchResults && searchResults.length ? searchResults[0].benh : "AA");
+    const d = DISEASES.find(x => x.k === kyHieu(nhan));
+    return d ? d.key : "aa";
+  }, [searchFilters.benh, searchResults]);
+  // Gộp các dòng kết quả (bệnh án mới + từng lần tái khám của cùng 1 ca) về danh sách CA duy nhất.
+  const caDeXuat = React.useMemo(() => {
+    const da = new Set();
+    const ra = [];
+    for (const r of searchResults || []) {
+      const k = r.benh + "|" + r.maBN;
+      if (!da.has(k)) {
+        da.add(k);
+        ra.push({
+          benh: r.benh,
+          maBN: r.maBN
+        });
+      }
+    }
+    return ra;
+  }, [searchResults]);
+  async function xuatChonTruong() {
+    if (!caDeXuat.length) {
+      window.alert("Chưa có kết quả tra cứu nào để xuất. Bấm Tìm trước đã.");
+      return;
+    }
+    if (!truongChon.length) {
+      window.alert("Chưa tích ô nào để xuất.");
+      return;
+    }
+    setDangXuatChon(true);
+    try {
+      const res = await api("/export/chon-truong", {
+        method: "POST",
+        body: JSON.stringify({
+          ds: caDeXuat,
+          truong: truongChon
+        })
+      });
+      const nhanCot = {};
+      cayXuat(benhChonTruong).forEach(([, muc]) => muc.forEach(([, truong]) => truong.forEach(([k, l]) => {
+        nhanCot[k] = l;
+      })));
+      const dau = res.cot.map(c => {
+        const m = /^L(\d+)\.(.*)$/.exec(c);
+        if (m) return `L${m[1]}_${nhanCot["tk." + m[2]] || m[2]}`;
+        return nhanCot[c] || c;
+      });
+      const dong = res.dong.map(r => res.cot.map(c => r[c] === undefined ? "" : r[c]));
+      await downloadXlsx("Dữ liệu", dau, dong, `de_tai_${res.so_benh_nhan}bn_${todayISO()}.xlsx`);
+    } catch (e) {
+      window.alert("Không xuất được: " + (e && e.message ? e.message : e));
+    } finally {
+      setDangXuatChon(false);
+    }
+  }
+
+  // Bật/tắt dấu "Đề tài AI" cho bệnh nhân đang mở. Dấu nằm ở BỆNH NHÂN nên mọi bệnh án và
+  // mọi lượt khám của người đó đổi theo ngay, kể cả các lần khám đã có từ trước.
+  async function doiDeTaiAi() {
+    if (!patient?.maBN) return;
+    const bat = !patient.deTaiAi;
+    if (!window.confirm(bat ? `Đánh dấu bệnh nhân ${patient.maBN} thuộc Đề tài AI?` : `Bỏ dấu Đề tài AI của bệnh nhân ${patient.maBN}?`)) return;
+    try {
+      await api(`/patients/${encodeURIComponent(patient.maBN)}/de-tai-ai`, {
+        method: "PUT",
+        body: JSON.stringify({
+          bat
+        })
+      });
+      setPatient(p => ({
+        ...p,
+        deTaiAi: bat
+      }));
+      loadToday();
+      if (searchResults) runSearch();
+    } catch (e) {
+      window.alert("Không đổi được dấu Đề tài AI: " + (e && e.message ? e.message : e));
+    }
+  }
   // Tải file zip do máy chủ dựng sẵn (ảnh bệnh án, hoặc dữ liệu thô của database).
   // Phải đi qua fetch chứ không dùng thẻ <a href> thẳng, vì các địa chỉ này đòi thẻ đăng nhập.
   async function taiTepZip(duong, tuyChon, tenDuPhong) {
@@ -10508,10 +10735,11 @@ function App() {
   React.createElement("button", {
     key: i,
     onClick: () => openRecord(r),
-    className: "w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50"
+    className: `w-full flex items-center justify-between text-sm py-1.5 ${r.deTaiAi ? "bg-violet-50 hover:bg-violet-100" : "hover:bg-gray-50"}`
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: r.benh,
-    dongMac: r.dongMac
+    dongMac: r.dongMac,
+    ai: r.deTaiAi
   }), /*#__PURE__*/React.createElement(LuuYBadge, {
     noiDung: r.luuY
   }), r.loai, " — ", r.hoTen || r.maBN, " ", /*#__PURE__*/React.createElement("span", {
@@ -10551,7 +10779,8 @@ function App() {
     className: "truncate flex items-center"
   }, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: r.benh,
-    dongMac: r.dongMac
+    dongMac: r.dongMac,
+    ai: r.deTaiAi
   }), /*#__PURE__*/React.createElement(LuuYBadge, {
     noiDung: r.luuY
   }), r.hoTen || r.maBN), /*#__PURE__*/React.createElement("span", {
@@ -10685,7 +10914,18 @@ function App() {
       ...searchFilters,
       chiChuaDien: e.target.checked
     })
-  }), "Chỉ hồ sơ chưa điền dữ liệu"), /*#__PURE__*/React.createElement("div", {
+  }), "Chỉ hồ sơ chưa điền dữ liệu"), /*#__PURE__*/React.createElement("label", {
+    className: "flex items-center gap-2 text-sm mb-3 cursor-pointer"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: searchFilters.deTaiAi,
+    onChange: e => setSearchFilters({
+      ...searchFilters,
+      deTaiAi: e.target.checked
+    })
+  }), /*#__PURE__*/React.createElement("span", null, "Chỉ bệnh nhân thuộc ", /*#__PURE__*/React.createElement("span", {
+    className: "px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-600 text-white"
+  }, "AI"), " Đề tài AI")), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 flex-wrap items-center"
   }, /*#__PURE__*/React.createElement("button", {
     className: "px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700",
@@ -10727,9 +10967,47 @@ function App() {
   }, dangTaiTep === "ảnh" ? "Đang tải…" : "Tải ảnh của kết quả tìm"), user.can_export &&
   /*#__PURE__*/
   /*#__PURE__*/
+  React.createElement("button", {
+    title: "Chọn đúng những ô cần lấy rồi xuất ra Excel — mỗi dòng 1 bệnh nhân",
+    className: `px-4 py-1.5 text-sm rounded-md ${moChonTruong ? "bg-teal-600 text-white hover:bg-teal-700" : "bg-gray-100 hover:bg-gray-200"}`,
+    onClick: () => setMoChonTruong(!moChonTruong)
+  }, "Xuất Excel chọn trường…"), user.can_export &&
+  /*#__PURE__*/
+  /*#__PURE__*/
   React.createElement("span", {
     className: "text-xs text-gray-400"
-  }, searchFilters.benh ? `Chỉ xuất bệnh ${searchFilters.benh}` : "Xuất tất cả các bệnh")), searchResults &&
+  }, searchFilters.benh ? `Chỉ xuất bệnh ${searchFilters.benh}` : "Xuất tất cả các bệnh"), user.can_export && moChonTruong &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("div", {
+    className: "mt-3 border border-teal-200 bg-teal-50/40 rounded-lg p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center justify-between gap-2 mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium text-gray-700"
+  }, "Chọn trường cần xuất"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-gray-500"
+  }, "Cây trường theo phiếu bệnh ", /*#__PURE__*/React.createElement("b", null, kyHieu(benhChonTruong)), " · ", caDeXuat.length, " bệnh nhân trong kết quả tìm")), caDeXuat.length > GIOI_HAN_HO_SO_XUAT &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("div", {
+    className: "text-xs bg-amber-50 text-amber-700 rounded-md px-3 py-2 mb-2"
+  }, "Đang có ", caDeXuat.length, " bệnh nhân, vượt mức ", GIOI_HAN_HO_SO_XUAT, " hồ sơ cho một lần xuất. Hãy thu hẹp khoảng ngày (hoặc lọc theo bệnh) rồi xuất thành nhiều đợt."), /*#__PURE__*/React.createElement(BangChonTruong, {
+    benhKey: benhChonTruong,
+    chon: truongChon,
+    setChon: setTruongChon
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-wrap items-center gap-2 mt-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: dangXuatChon || !truongChon.length || caDeXuat.length > GIOI_HAN_HO_SO_XUAT,
+    onClick: xuatChonTruong,
+    className: "px-4 py-1.5 bg-teal-600 text-white text-sm rounded-md hover:bg-teal-700 disabled:opacity-50"
+  }, dangXuatChon ? "Đang xuất…" : "Xuất Excel"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTruongChon([]),
+    className: "px-3 py-1.5 bg-gray-100 text-sm rounded-md hover:bg-gray-200"
+  }, "Bỏ chọn hết"), /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-gray-500"
+  }, "Đã chọn ", /*#__PURE__*/React.createElement("b", null, truongChon.length), " ô")))), searchResults &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("div", {
@@ -10744,10 +11022,11 @@ function App() {
   React.createElement("button", {
     key: i,
     onClick: () => openRecord(r),
-    className: "w-full flex items-center justify-between text-sm py-1.5 hover:bg-gray-50"
+    className: `w-full flex items-center justify-between text-sm py-1.5 ${r.deTaiAi ? "bg-violet-50 hover:bg-violet-100" : "hover:bg-gray-50"}`
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: r.benh,
-    dongMac: r.dongMac
+    dongMac: r.dongMac,
+    ai: r.deTaiAi
   }), /*#__PURE__*/React.createElement(LuuYBadge, {
     noiDung: r.luuY
   }), r.loai, " — ", r.hoTen || r.maBN, " ", /*#__PURE__*/React.createElement("span", {
@@ -10882,7 +11161,8 @@ function App() {
     className: "text-sm text-gray-500 flex items-center flex-wrap gap-x-1"
   }, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: kyHieu(currentDisease),
-    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(","),
+    ai: patient?.deTaiAi
   }), patient.hoTen, " —", /*#__PURE__*/React.createElement("button", {
     onClick: openTimelineFromForm,
     title: "Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển",
@@ -10891,7 +11171,14 @@ function App() {
     patient: patient
   })), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center"
-  }, user.can_export &&
+  }, !(user.can_gpb && !user.is_admin) &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("button", {
+    title: "Đánh dấu bệnh nhân này thuộc Đề tài AI — áp cho mọi bệnh án và mọi lượt khám của họ",
+    className: `text-xs px-2 py-1 mr-2 rounded-md ${patient?.deTaiAi ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-gray-100 hover:bg-gray-200"}`,
+    onClick: doiDeTaiAi
+  }, patient?.deTaiAi ? "✓ Đề tài AI" : "Đánh dấu Đề tài AI"), user.can_export &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("button", {
@@ -10977,7 +11264,8 @@ function App() {
     className: "font-medium flex items-center"
   }, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: kyHieu(currentDisease),
-    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(","),
+    ai: patient?.deTaiAi
   }), patient.hoTen, " — ", patient.maBN), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-400"
   }, "Mã lưu trữ ", aaCase.maLuuTru, " · ", patient.gioiTinh, ", sinh ", patient.ngaySinh || patient.namSinh, patient.sdt ? ` · ${patient.sdt}` : "", patient.diaChi ? ` · ${patient.diaChi}` : "")), /*#__PURE__*/React.createElement("div", {
@@ -11059,7 +11347,8 @@ function App() {
     className: "font-medium flex items-center"
   }, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: kyHieu(currentDisease),
-    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(","),
+    ai: patient?.deTaiAi
   }), "T0 — Bệnh án mới (", aaCase.benhAnMoi?.ngayKham || "chưa có ngày", ")"), /*#__PURE__*/React.createElement("div", {
     className: "text-xs text-gray-400"
   }, currentDisease === "aga" ? `Hamilton-Norwood ${aaCase.benhAnMoi?.hamiltonNorwood || "—"} · Sinclair ${aaCase.benhAnMoi?.sinclairScale || "—"}` : currentDisease === "nonscar" ? `Kiểu rụng tóc: ${aaCase.benhAnMoi?.kieuRungToc || "—"}` : currentDisease === "sa" ? `LPPAI ${calcLppai(aaCase.benhAnMoi || {}) ?? "—"} · ${aaCase.benhAnMoi?.icd10 || "chưa chọn ICD-10"}` : currentDisease === "ttm" ? `MGH-HPS ${calcMgh(aaCase.benhAnMoi || {}) ?? "—"}/28 · ${mucDoMgh(calcMgh(aaCase.benhAnMoi || {})) || "—"}` : `SALT ${fmt(calcSalt(aaCase.benhAnMoi?.vung || {}))} · ${aaCase.benhAnMoi?.theLamSang || "—"}`)), /*#__PURE__*/React.createElement("span", {
@@ -11083,7 +11372,8 @@ function App() {
       className: "font-medium flex items-center"
     }, /*#__PURE__*/React.createElement(DiseaseTags, {
       benh: kyHieu(currentDisease),
-      dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
+      dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(","),
+      ai: patient?.deTaiAi
     }), "Tái khám ", i + 1, " (", tk.ngayKham || "chưa có ngày", ")"), /*#__PURE__*/React.createElement("div", {
       className: "text-xs text-gray-400"
     }, currentDisease === "aga" ? `Hamilton-Norwood ${tk.hamiltonNorwood || "—"} · Sinclair ${tk.sinclairScale || "—"}` : currentDisease === "nonscar" ? `Mức độ so với trước: ${tk.mucDoSoVoiTruoc || "—"}` : currentDisease === "sa" ? `LPPAI ${calcLppai(tk) ?? "—"}${tk.thayDoiSoVoiTruoc ? ` · ${tk.thayDoiSoVoiTruoc} so lần trước` : ""}` : currentDisease === "ttm" ? `MGH-HPS ${calcMgh(tk) ?? "—"}/28${tk.soVoiLanTruoc ? ` · ${tk.soVoiLanTruoc}` : ""}` : `SALT ${fmt(s)}${tk.mucDoDapUng ? ` · đáp ứng ${tk.mucDoDapUng}` : ""}`)), /*#__PURE__*/React.createElement("span", {
@@ -11111,7 +11401,8 @@ function App() {
     className: "text-sm text-gray-500 flex items-center flex-wrap gap-x-1"
   }, /*#__PURE__*/React.createElement(DiseaseTags, {
     benh: kyHieu(currentDisease),
-    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(",")
+    dongMac: (aaCase?.benhAnMoi?.dongMacBenh || []).join(","),
+    ai: patient?.deTaiAi
   }), patient.hoTen, " —", /*#__PURE__*/React.createElement("button", {
     onClick: openTimelineFromForm,
     title: "Xem toàn bộ lần khám của bệnh nhân này — phiếu đang mở được lưu lại trước khi chuyển",
@@ -11120,7 +11411,14 @@ function App() {
     patient: patient
   })), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center"
-  }, user.can_export &&
+  }, !(user.can_gpb && !user.is_admin) &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("button", {
+    title: "Đánh dấu bệnh nhân này thuộc Đề tài AI — áp cho mọi bệnh án và mọi lượt khám của họ",
+    className: `text-xs px-2 py-1 mr-2 rounded-md ${patient?.deTaiAi ? "bg-violet-600 text-white hover:bg-violet-700" : "bg-gray-100 hover:bg-gray-200"}`,
+    onClick: doiDeTaiAi
+  }, patient?.deTaiAi ? "✓ Đề tài AI" : "Đánh dấu Đề tài AI"), user.can_export &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("button", {
@@ -11222,13 +11520,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 /*#__PURE__*/
 React.createElement(App, null));
 }
-</script>
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {});
-    });
-  }
 </script>
 </body>
 </html>
