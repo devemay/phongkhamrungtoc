@@ -322,6 +322,12 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 /* Thẻ [AI] và nút đánh dấu */
 .the-ai { background-color: #d93025; color: #fff; }
 .nut-ai:hover { background-color: #b7271d; }
+/* Dải báo "thuộc Đề tài AI" hiện ngay trên phiếu khám */
+.bang-ai { background-color: #fdecec; border: 1px solid #f3b7b7; color: #7f1d1d; }
+/* Hai lớp viền Tailwind KHÔNG có trong bảng CSS sinh sẵn — khai ở đây để viền hiện đúng.
+   (Dùng kiemthu/soat_lop_css.js để phát hiện những trường hợp như vậy.) */
+.border-red-300 { border-color: #fca5a5; }
+.border-amber-200 { border-color: #fde68a; }
 </style>
 <style>
   /* Nền chung: chuyển sắc xanh rất nhạt, cùng tông với trang đăng nhập.
@@ -451,6 +457,9 @@ function todayISO() {
 
 // ---------- kết nối backend thật ----------
 const API_BASE = window.AA_API_BASE || "http://localhost:8000";
+// Số bản của GIAO DIỆN. Phải khớp với PHIEN_BAN trong backend/main.py. Máy chủ cũ hơn con số
+// này thì giao diện hiện cảnh báo, vì tính năng mới sẽ im lặng không chạy.
+const BAN_GIAO_DIEN = 29;
 async function apiFetch(path, options = {}, token) {
   const headers = {
     ...(options.headers || {})
@@ -8242,6 +8251,55 @@ function KetQuaGpbChiXem({
   }, "Chỉ bác sĩ giải phẫu bệnh sửa được phần này, ở màn “Giải phẫu bệnh”."));
 }
 
+// ---------- Dấu "Đề tài AI" trong phiếu đang mở ----------
+// Hai nút TÁCH RIÊNG chứ không dùng một nút bật/tắt: khi đã thuộc đề tài, người dùng cần thấy
+// rõ trạng thái và có nút "Xoá khỏi đề tài" riêng, tránh bấm nhầm vào chính cái nhãn trạng thái.
+function NutDeTaiAi({
+  patient,
+  user,
+  onDoi
+}) {
+  if (user.can_gpb && !user.is_admin) return null; // tài khoản giải phẫu bệnh chỉ được đọc
+  if (!patient?.deTaiAi) {
+    return /*#__PURE__*/ /*#__PURE__*/React.createElement("button", {
+      title: "Đánh dấu bệnh nhân này thuộc Đề tài AI — áp cho mọi bệnh án và mọi lượt khám của họ",
+      className: "text-xs px-2 py-1 mr-2 rounded-md bg-gray-100 hover:bg-gray-200",
+      onClick: () => onDoi(true)
+    }, "+ Đề tài AI");
+  }
+  return /*#__PURE__*/ /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center mr-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "the-ai text-xs px-2 py-1 rounded-md font-semibold"
+  }, "✓ Đề tài AI"), /*#__PURE__*/React.createElement("button", {
+    title: "Bỏ bệnh nhân này khỏi Đề tài AI (dữ liệu bệnh án không đổi)",
+    className: "text-xs px-2 py-1 ml-1 rounded-md border border-red-300 text-red-700 hover:bg-red-50",
+    onClick: () => onDoi(false)
+  }, "Xoá khỏi đề tài"));
+}
+// Dải báo ngay trên phiếu khám — để khi đang điền bệnh án vẫn thấy rõ ca này thuộc đề tài.
+function BangDeTaiAi({
+  patient,
+  user,
+  onDoi
+}) {
+  if (!patient?.deTaiAi) return null;
+  const choXoa = !(user.can_gpb && !user.is_admin);
+  return /*#__PURE__*/ /*#__PURE__*/React.createElement("div", {
+    className: "bang-ai rounded-md px-3 py-2 mb-3 flex flex-wrap items-center justify-between gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-sm"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "the-ai text-[10px] px-1.5 py-0.5 rounded font-semibold mr-2"
+  }, "AI"), /*#__PURE__*/React.createElement("b", null, "Bệnh nhân thuộc Đề tài AI."), " Dấu áp cho mọi bệnh án và mọi lượt khám của người này."), choXoa &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("button", {
+    className: "text-xs px-2 py-1 rounded-md border border-red-300 text-red-700 bg-white hover:bg-red-50",
+    onClick: () => onDoi(false)
+  }, "Xoá khỏi đề tài"));
+}
+
 // ---------- Bảng chọn trường để xuất Excel ----------
 // Mỗi mục (tab) là một dòng bấm mở/đóng được; trong mục là các ô tích. Tích ô nào thì file
 // Excel có đúng cột đó. Các ô thuộc "Các lần tái khám" nở thành L1_, L2_... theo số lần khám.
@@ -10369,6 +10427,22 @@ function App() {
   // Bản tóm tắt: mỗi dòng 1 lần khám, chỉ các cột cốt lõi hay dùng để lọc/thống kê nhanh
   // Bọc mọi thao tác xuất Excel: báo lỗi rõ ràng thay vì im lặng không có gì xảy ra
   // (thư viện xlsx nay được tải khi bấm nút, nên có thêm khả năng lỗi mạng ở bước đó).
+  // Máy chủ cũ hơn giao diện -> hiện cảnh báo thường trực. Không chặn dùng tiếp, chỉ nói rõ
+  // vì sao tính năng mới "không có gì xảy ra".
+  const [canhBaoMayChu, setCanhBaoMayChu] = useState("");
+  React.useEffect(() => {
+    if (!user?.token) return;
+    (async () => {
+      try {
+        const r = await apiFetch("/phien-ban", {}, user.token);
+        const ban = r && typeof r.ban === "number" ? r.ban : 0;
+        setCanhBaoMayChu(ban < BAN_GIAO_DIEN ? `Máy chủ đang chạy bản ${ban}, giao diện là bản ${BAN_GIAO_DIEN}. Một số tính năng mới sẽ không hoạt động — hãy cập nhật aa_backend.zip lên Render.` : "");
+      } catch (e) {
+        setCanhBaoMayChu(`Máy chủ đang chạy bản cũ hơn bản ${BAN_GIAO_DIEN} của giao diện. Một số tính năng mới sẽ không hoạt động — hãy cập nhật aa_backend.zip lên Render.`);
+      }
+    })();
+  }, [user?.token]);
+
   // ---------- xuất Excel chọn trường ----------
   const [moChonTruong, setMoChonTruong] = useState(false);
   const [truongChon, setTruongChon] = useState(["bn.maBN", "bn.hoTen", "bn.gioiTinh", "bn.namSinh", "hs.maLuuTru", "hs.benh"]);
@@ -10433,10 +10507,9 @@ function App() {
 
   // Bật/tắt dấu "Đề tài AI" cho bệnh nhân đang mở. Dấu nằm ở BỆNH NHÂN nên mọi bệnh án và
   // mọi lượt khám của người đó đổi theo ngay, kể cả các lần khám đã có từ trước.
-  async function doiDeTaiAi() {
+  async function doiDeTaiAi(bat) {
     if (!patient?.maBN) return;
-    const bat = !patient.deTaiAi;
-    if (!window.confirm(bat ? `Đánh dấu bệnh nhân ${patient.maBN} thuộc Đề tài AI?` : `Bỏ dấu Đề tài AI của bệnh nhân ${patient.maBN}?`)) return;
+    if (!window.confirm(bat ? `Đánh dấu bệnh nhân ${patient.maBN} thuộc Đề tài AI?\n\nDấu áp cho TẤT CẢ bệnh án và mọi lượt khám của người này.` : `Xoá bệnh nhân ${patient.maBN} khỏi Đề tài AI?\n\nDữ liệu bệnh án không bị ảnh hưởng, chỉ bỏ dấu.`)) return;
     try {
       await api(`/patients/${encodeURIComponent(patient.maBN)}/de-tai-ai`, {
         method: "PUT",
@@ -10451,7 +10524,10 @@ function App() {
       loadToday();
       if (searchResults) runSearch();
     } catch (e) {
-      window.alert("Không đổi được dấu Đề tài AI: " + (e && e.message ? e.message : e));
+      const t = e && e.message ? e.message : String(e);
+      // Máy chủ chưa cập nhật thì địa chỉ này chưa tồn tại -> nói thẳng việc cần làm,
+      // thay vì để người dùng đoán tại sao đánh dấu xong lại mất.
+      window.alert(/404|Not Found/i.test(t) ? "Máy chủ chưa có tính năng Đề tài AI.\n\nCần cập nhật aa_backend.zip (bản 29) lên Render rồi đợi báo Live, sau đó thử lại." : "Không đổi được dấu Đề tài AI: " + t);
     }
   }
   // Tải file zip do máy chủ dựng sẵn (ảnh bệnh án, hoặc dữ liệu thô của database).
@@ -10687,7 +10763,12 @@ function App() {
   }, "Giải phẫu bệnh"), /*#__PURE__*/React.createElement("button", {
     className: "text-sm text-teal-700 hover:underline",
     onClick: logout
-  }, "Đăng xuất"))), view === "home" &&
+  }, "Đăng xuất"))), canhBaoMayChu &&
+  /*#__PURE__*/
+  /*#__PURE__*/
+  React.createElement("div", {
+    className: "bg-amber-50 text-amber-800 border border-amber-200 rounded-md px-3 py-2 text-sm mb-3"
+  }, "⚠ ", canhBaoMayChu), view === "home" &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("div", {
@@ -11180,14 +11261,11 @@ function App() {
     patient: patient
   })), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center"
-  }, !(user.can_gpb && !user.is_admin) &&
-  /*#__PURE__*/
-  /*#__PURE__*/
-  React.createElement("button", {
-    title: "Đánh dấu bệnh nhân này thuộc Đề tài AI — áp cho mọi bệnh án và mọi lượt khám của họ",
-    className: `text-xs px-2 py-1 mr-2 rounded-md ${patient?.deTaiAi ? "the-ai nut-ai" : "bg-gray-100 hover:bg-gray-200"}`,
-    onClick: doiDeTaiAi
-  }, patient?.deTaiAi ? "✓ Đề tài AI" : "Đánh dấu Đề tài AI"), user.can_export &&
+  }, /*#__PURE__*/React.createElement(NutDeTaiAi, {
+    patient: patient,
+    user: user,
+    onDoi: doiDeTaiAi
+  }), user.can_export &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("button", {
@@ -11201,7 +11279,11 @@ function App() {
     data: aaCase.benhAnMoi
   }), /*#__PURE__*/React.createElement(StatusBadge, {
     done: aaCase.daDienDuLieu
-  }))), currentDisease === "sa" ?
+  }))), /*#__PURE__*/React.createElement(BangDeTaiAi, {
+    patient: patient,
+    user: user,
+    onDoi: doiDeTaiAi
+  }), currentDisease === "sa" ?
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement(NewSAForm, {
@@ -11420,14 +11502,11 @@ function App() {
     patient: patient
   })), /*#__PURE__*/React.createElement("span", {
     className: "flex items-center"
-  }, !(user.can_gpb && !user.is_admin) &&
-  /*#__PURE__*/
-  /*#__PURE__*/
-  React.createElement("button", {
-    title: "Đánh dấu bệnh nhân này thuộc Đề tài AI — áp cho mọi bệnh án và mọi lượt khám của họ",
-    className: `text-xs px-2 py-1 mr-2 rounded-md ${patient?.deTaiAi ? "the-ai nut-ai" : "bg-gray-100 hover:bg-gray-200"}`,
-    onClick: doiDeTaiAi
-  }, patient?.deTaiAi ? "✓ Đề tài AI" : "Đánh dấu Đề tài AI"), user.can_export &&
+  }, /*#__PURE__*/React.createElement(NutDeTaiAi, {
+    patient: patient,
+    user: user,
+    onDoi: doiDeTaiAi
+  }), user.can_export &&
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement("button", {
@@ -11449,7 +11528,11 @@ function App() {
     onClick: () => {
       if (window.confirm(`Xoá lần tái khám ${editIdx + 1}? Không thể hoàn tác.`)) deleteFollowupAt(editIdx);
     }
-  }, "Xoá lần tái khám này"))), currentDisease === "sa" ?
+  }, "Xoá lần tái khám này"))), /*#__PURE__*/React.createElement(BangDeTaiAi, {
+    patient: patient,
+    user: user,
+    onDoi: doiDeTaiAi
+  }), currentDisease === "sa" ?
   /*#__PURE__*/
   /*#__PURE__*/
   React.createElement(SAFollowUpForm, {
